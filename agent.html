@@ -1,297 +1,389 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Agent Panel</title>
-
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    body { font-family: sans-serif; padding: 16px; margin: 0; }
-    h2 { margin: 0 0 12px 0; }
-    .muted { color:#666; font-size: 14px; margin-top: 6px; }
-    .card { border:1px solid #eee; border-radius:12px; padding:12px; margin:12px 0; }
-    button { cursor:pointer; border:0; border-radius:12px; padding:12px; width:100%; font-size:16px; }
-    .btn { background:#111; color:#fff; }
-    .btn2 { background:#f2f2f2; color:#111; }
-    input { width:100%; padding:12px; border:1px solid #ddd; border-radius:12px; font-size:16px; box-sizing: border-box; }
-    .link { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; word-break: break-all; background:#f7f7f7; padding:10px; border-radius:10px; }
-    .row { display:flex; gap:10px; }
-    .row > * { flex:1; }
-    .hidden { display:none; }
-    .ok { color:#0a7; }
-    .error { color:#b00020; }
-    .listItem { border:1px solid #eee; border-radius:12px; padding:10px; margin:8px 0; }
-  </style>
+<meta charset="UTF-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Agent Panel</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        primary: "#24A1DE",
+        "bg-light": "#F2F2F7",
+        "bg-dark": "#0F0F0F",
+        "card-light": "#FFFFFF",
+        "card-dark": "#1C1C1E",
+      },
+      fontFamily: { sans: ["Inter", "sans-serif"] },
+    },
+  },
+};
+</script>
+<style>
+body { font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; min-height:100dvh; }
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+</style>
 </head>
+<body class="bg-bg-light dark:bg-bg-dark text-slate-900 dark:text-white transition-colors">
 
-<body>
-
-  <h2 id="title">Загрузка…</h2>
-  <div id="subtitle" class="muted"></div>
-
-  <!-- NOT REGISTERED -->
-  <div id="notRegistered" class="card hidden">
-    <h3>Вы ещё не агент</h3>
-    <div class="muted">Нажмите кнопку ниже, чтобы создать профиль агента и начать принимать записи.</div>
-    <div style="height:12px"></div>
-    <button class="btn" id="registerBtn">Зарегистрироваться как агент</button>
-    <div id="regStatus" class="muted" style="margin-top:10px"></div>
+<!-- WELCOME SCREEN (not registered) -->
+<div id="screenWelcome" class="hidden min-h-screen flex flex-col items-center justify-center px-6 text-center">
+  <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+    <span class="material-icons-outlined text-4xl text-primary">waving_hand</span>
   </div>
-
-  <!-- REGISTERED PANEL -->
-  <div id="panel" class="hidden">
-
-    <div class="card">
-      <h3>Ваша ссылка для клиентов</h3>
-      <div id="myLink" class="link">...</div>
-      <div class="row" style="margin-top:10px">
-        <button class="btn2" id="copyBtn">Скопировать</button>
-        <button class="btn2" id="openBtn">Открыть</button>
+  <h1 class="text-2xl font-bold mb-2">Добро пожаловать!</h1>
+  <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Вы впервые здесь. Выберите что хотите сделать.</p>
+  <div class="w-full max-w-sm space-y-3">
+    <button onclick="showMyBookings()" class="w-full bg-card-light dark:bg-card-dark border border-slate-200 dark:border-slate-700 rounded-2xl p-4 flex items-center gap-4 text-left active:scale-[0.98] transition-transform">
+      <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+        <span class="material-icons-outlined text-primary text-2xl">calendar_today</span>
       </div>
-      <div id="linkStatus" class="muted" style="margin-top:10px"></div>
-    </div>
-
-    <div class="card">
-      <h3>Добавить услугу</h3>
-      <input id="svcTitle" placeholder="Название (например: Консультация)" />
-      <div class="row">
-        <input id="svcDuration" type="number" min="5" step="5" placeholder="Мин" />
-        <input id="svcPrice" type="number" min="0" step="1000" placeholder="Цена (опц.)" />
+      <div>
+        <p class="font-semibold">Мои записи</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Посмотреть мои записи к специалистам</p>
       </div>
-      <button class="btn" id="addSvcBtn">Добавить</button>
-      <div id="svcStatus" class="muted" style="margin-top:10px"></div>
-    </div>
-
-    <div class="card">
-      <h3>Мои услуги</h3>
-      <div id="services"></div>
-      <div id="noServices" class="muted hidden">Пока нет услуг.</div>
-    </div>
-
-    <div class="card">
-      <h3>Мои записи</h3>
-      <div id="bookings"></div>
-      <div id="noBookings" class="muted hidden">Записей пока нет.</div>
-    </div>
-
+    </button>
+    <button onclick="registerAgent()" class="w-full bg-primary rounded-2xl p-4 flex items-center gap-4 text-left active:scale-[0.98] transition-transform text-white shadow-lg shadow-primary/25">
+      <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+        <span class="material-icons-outlined text-white text-2xl">storefront</span>
+      </div>
+      <div>
+        <p class="font-semibold">Стать агентом</p>
+        <p class="text-xs text-white/70 mt-0.5">Принимать записи и предоставлять услуги</p>
+      </div>
+    </button>
   </div>
+  <div id="welcomeStatus" class="mt-4 text-sm text-slate-500 dark:text-slate-400"></div>
+</div>
+
+<!-- MY BOOKINGS SCREEN (client view) -->
+<div id="screenMyBookings" class="hidden">
+  <header class="px-4 pt-6 pb-4 sticky top-0 z-40 bg-bg-light dark:bg-bg-dark border-b border-slate-200 dark:border-slate-800">
+    <div class="flex items-center gap-3 mb-1">
+      <button onclick="showScreen('welcome')" class="text-primary p-1 -ml-1">
+        <span class="material-icons-outlined">chevron_left</span>
+      </button>
+      <h1 class="text-xl font-bold">Мои записи</h1>
+    </div>
+  </header>
+  <main class="p-4">
+    <div id="myBookingsList" class="space-y-3"></div>
+    <div id="noMyBookings" class="hidden text-center py-16">
+      <span class="material-icons-outlined text-5xl text-slate-300 dark:text-slate-600">event_busy</span>
+      <p class="mt-3 text-slate-500 dark:text-slate-400 text-sm">Записей пока нет.</p>
+      <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Запишитесь к специалисту через его ссылку</p>
+    </div>
+  </main>
+</div>
+
+<!-- DASHBOARD SCREEN (registered agent) -->
+<div id="screenDashboard" class="hidden">
+  <div class="h-11 w-full bg-bg-light dark:bg-bg-dark sticky top-0 z-50"></div>
+  <header class="px-4 pb-4 bg-bg-light dark:bg-bg-dark sticky top-11 z-40 border-b border-slate-200 dark:border-slate-800">
+    <div class="flex items-center justify-between mb-4 pt-2">
+      <h1 class="text-2xl font-bold tracking-tight">Панель агента</h1>
+      <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm" id="agentAvatar">A</div>
+    </div>
+    <div class="flex gap-3 overflow-x-auto no-scrollbar">
+      <div class="flex-shrink-0 bg-primary/10 dark:bg-primary/20 border border-primary/20 rounded-2xl px-4 py-3 min-w-[110px]">
+        <span class="block text-primary text-xs font-semibold uppercase tracking-wider mb-1">Сегодня</span>
+        <span id="statToday" class="text-xl font-bold text-primary">0</span>
+      </div>
+      <div class="flex-shrink-0 bg-green-500/10 dark:bg-green-500/20 border border-green-500/20 rounded-2xl px-4 py-3 min-w-[110px]">
+        <span class="block text-green-600 dark:text-green-400 text-xs font-semibold uppercase tracking-wider mb-1">Всего</span>
+        <span id="statTotal" class="text-xl font-bold text-green-600 dark:text-green-400">0</span>
+      </div>
+      <div class="flex-shrink-0 bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/20 rounded-2xl px-4 py-3 min-w-[110px]">
+        <span class="block text-amber-600 dark:text-amber-400 text-xs font-semibold uppercase tracking-wider mb-1">Новых</span>
+        <span id="statNew" class="text-xl font-bold text-amber-600 dark:text-amber-400">0</span>
+      </div>
+    </div>
+  </header>
+  <main class="p-4 pb-28">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold" id="todayLabel">Сегодня</h2>
+    </div>
+    <div id="bookingTimeline" class="relative space-y-4">
+      <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-800"></div>
+    </div>
+    <div id="noTodayBookings" class="hidden text-center py-12">
+      <span class="material-icons-outlined text-5xl text-slate-300 dark:text-slate-600">event_available</span>
+      <p class="mt-3 text-slate-500 dark:text-slate-400 text-sm">Записей на сегодня нет</p>
+    </div>
+  </main>
+</div>
+
+<!-- SERVICES SCREEN -->
+<div id="screenServices" class="hidden">
+  <header class="px-4 pt-6 pb-4 sticky top-0 z-40 bg-bg-light dark:bg-bg-dark border-b border-slate-200 dark:border-slate-800">
+    <h1 class="text-2xl font-bold tracking-tight">Мои услуги</h1>
+  </header>
+  <main class="p-4 pb-28 space-y-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
+      <h3 class="font-semibold mb-3 text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide">Добавить услугу</h3>
+      <input id="svcTitle" type="text" placeholder="Название (напр.: Консультация)"
+        class="w-full bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-primary"/>
+      <div class="flex gap-3 mb-3">
+        <input id="svcDuration" type="number" min="5" step="5" placeholder="Мин"
+          class="flex-1 bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+        <input id="svcPrice" type="text" placeholder="Цена (опц.)"
+          class="flex-1 bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+      </div>
+      <button onclick="addService()" class="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm active:opacity-80">Добавить</button>
+      <p id="svcStatus" class="text-center text-xs mt-2 text-slate-500 dark:text-slate-400 min-h-4"></p>
+    </div>
+    <div id="servicesList2" class="space-y-3"></div>
+    <div id="noServicesList" class="hidden text-center py-8 text-slate-400 dark:text-slate-500 text-sm">Услуг пока нет.</div>
+  </main>
+</div>
+
+<!-- SETTINGS SCREEN -->
+<div id="screenSettings" class="hidden">
+  <header class="px-4 pt-6 pb-4 sticky top-0 z-40 bg-bg-light dark:bg-bg-dark border-b border-slate-200 dark:border-slate-800">
+    <h1 class="text-2xl font-bold tracking-tight">Настройки</h1>
+  </header>
+  <main class="p-4 pb-28 space-y-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
+      <h3 class="font-semibold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Ваша ссылка для клиентов</h3>
+      <div class="font-mono text-xs bg-bg-light dark:bg-bg-dark rounded-xl p-3 break-all text-slate-600 dark:text-slate-300 mb-3" id="settingsLink"></div>
+      <div class="flex gap-3">
+        <button onclick="copyLink()" class="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-semibold active:opacity-80">Скопировать</button>
+        <button onclick="openLink()" class="flex-1 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 text-sm font-semibold active:opacity-80">Открыть</button>
+      </div>
+      <p id="linkStatus" class="text-center text-xs mt-2 text-slate-500 min-h-4"></p>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
+      <h3 class="font-semibold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Профиль</h3>
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg" id="settingsAvatar">A</div>
+        <div>
+          <p class="font-semibold" id="settingsName"></p>
+          <p class="text-xs text-slate-500 dark:text-slate-400" id="settingsUsername"></p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- BOTTOM NAV (for registered) -->
+<nav id="bottomNav" class="hidden fixed bottom-0 left-0 right-0 h-20 bg-white/90 dark:bg-black/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-around px-6 z-40" style="padding-bottom:max(16px,env(safe-area-inset-bottom))">
+  <button onclick="switchTab('dashboard')" class="nav-btn flex flex-col items-center gap-1 text-primary" data-tab="dashboard">
+    <span class="material-icons-outlined">dashboard</span>
+    <span class="text-[10px] font-medium">Главная</span>
+  </button>
+  <button onclick="switchTab('services')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500" data-tab="services">
+    <span class="material-icons-outlined">medical_services</span>
+    <span class="text-[10px] font-medium">Услуги</span>
+  </button>
+  <button onclick="switchTab('settings')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500" data-tab="settings">
+    <span class="material-icons-outlined">settings</span>
+    <span class="text-[10px] font-medium">Настройки</span>
+  </button>
+</nav>
 
 <script>
-  const tg = window.Telegram.WebApp;
-  tg.expand();
+(function(){
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if(tg){ tg.expand(); tg.ready(); }
+  if(tg && tg.colorScheme === 'dark') document.documentElement.classList.add('dark');
 
-  const sb = window.supabase.createClient(
-    "https://uuiprnacqstiwfuxvyet.supabase.co",
-    "sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs"
-  );
+  const SUPABASE_URL = "https://uuiprnacqstiwfuxvyet.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs";
+  const BOT_USERNAME = "testaltegiobot";
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const BOT_USERNAME = "testaltegiobot"; // поменяй если другой
-
-  const tgUserId = tg?.initDataUnsafe?.user?.id || null;
-  const username = tg?.initDataUnsafe?.user?.username || null;
-  const fullName = [tg?.initDataUnsafe?.user?.first_name, tg?.initDataUnsafe?.user?.last_name].filter(Boolean).join(" ") || null;
+  const tgUserId = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || null;
+  const username = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.username) || null;
+  const fn = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || '';
+  const ln = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.last_name) || '';
+  const fullName = [fn, ln].filter(Boolean).join(' ') || username || 'Агент';
 
   let agent = null;
+  const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const MONTHS_G = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 
-  function show(id){ document.getElementById(id).classList.remove("hidden"); }
-  function hide(id){ document.getElementById(id).classList.add("hidden"); }
-
-  function setText(id, t){ document.getElementById(id).textContent = t; }
-
-  function randomCode(){
-    return (Math.random().toString(36).slice(2, 10)).toLowerCase();
+  function showScreen(name){
+    var screens = ['welcome','myBookings','dashboard','services','settings'];
+    screens.forEach(function(s){
+      document.getElementById('screen' + s.charAt(0).toUpperCase() + s.slice(1)).classList.add('hidden');
+    });
+    document.getElementById('screen' + name.charAt(0).toUpperCase() + name.slice(1)).classList.remove('hidden');
   }
 
-  async function init(){
-    if(!tgUserId){
-      setText("title", "Откройте через Telegram");
-      setText("subtitle", "Не вижу Telegram user id.");
+  window.switchTab = function(tab){
+    showScreen(tab);
+    document.querySelectorAll('.nav-btn').forEach(function(btn){
+      var active = btn.dataset.tab === tab;
+      btn.className = 'nav-btn flex flex-col items-center gap-1 ' + (active ? 'text-primary' : 'text-slate-400 dark:text-slate-500');
+    });
+  };
+
+  window.showMyBookings = async function(){
+    showScreen('myBookings');
+    if(!tgUserId){ document.getElementById('noMyBookings').classList.remove('hidden'); return; }
+    var r = await sb.from('bookings').select('id,customer_name,start_time,services(title),agents(full_name,username)').eq('customer_tg_id', tgUserId).order('start_time', {ascending: true}).limit(50);
+    var list = document.getElementById('myBookingsList');
+    list.innerHTML = '';
+    if(r.error || !r.data || !r.data.length){
+      document.getElementById('noMyBookings').classList.remove('hidden');
       return;
     }
+    r.data.forEach(function(b){
+      var dt = new Date(b.start_time);
+      var agentName = (b.agents && (b.agents.full_name || b.agents.username)) || 'Агент';
+      var div = document.createElement('div');
+      div.className = 'bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800';
+      div.innerHTML = '<div class="flex justify-between items-start"><div><h3 class="font-bold">' + esc(agentName) + '</h3><p class="text-sm text-slate-500 dark:text-slate-400">' + esc((b.services && b.services.title) || 'Услуга') + '</p></div><span class="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap ml-2">' + dt.getDate() + ' ' + MONTHS_G[dt.getMonth()] + '<br>' + pad(dt.getHours()) + ':' + pad(dt.getMinutes()) + '</span></div>';
+      list.appendChild(div);
+    });
+  };
 
-    setText("title", "Панель агента");
-    setText("subtitle", "Проверяю регистрацию…");
-
-    const { data, error } = await sb
-      .from("agents")
-      .select("*")
-      .eq("tg_user_id", tgUserId)
-      .maybeSingle();
-
-    if(error){
-      console.error(error);
-      setText("subtitle", "Ошибка Supabase.");
-      return;
-    }
-
-    agent = data;
-
-    if(!agent){
-      hide("panel");
-      show("notRegistered");
-      setText("subtitle", "Вы не зарегистрированы как агент.");
-      document.getElementById("registerBtn").onclick = registerAgent;
-      return;
-    }
-
-    hide("notRegistered");
-    show("panel");
-    setText("subtitle", "Вы зарегистрированы ✅");
-
-    renderLink();
-    document.getElementById("addSvcBtn").onclick = addService;
-
-    await refreshAll();
-  }
-
-  async function registerAgent(){
-    setText("regStatus", "Создаю профиль…");
-
-    const code = randomCode();
-
-    const { data, error } = await sb.from("agents").insert({
+  window.registerAgent = async function(){
+    document.getElementById('welcomeStatus').textContent = 'Создаём профиль…';
+    var code = Math.random().toString(36).slice(2, 10).toLowerCase();
+    var r = await sb.from('agents').insert({
       tg_user_id: tgUserId,
       username: username,
       full_name: fullName,
       agent_code: code
-    }).select("*").single();
-
-    if(error){
-      console.error(error);
-      setText("regStatus", "Ошибка регистрации ❌");
+    }).select('*').single();
+    if(r.error){
+      document.getElementById('welcomeStatus').textContent = 'Ошибка: ' + r.error.message;
       return;
     }
+    agent = r.data;
+    initDashboard();
+  };
 
-    agent = data;
-    setText("regStatus", "Готово ✅");
-    hide("notRegistered");
-    show("panel");
-    renderLink();
-    await refreshAll();
+  function initDashboard(){
+    var initial = (fullName || 'A').charAt(0).toUpperCase();
+    document.getElementById('agentAvatar').textContent = initial;
+    document.getElementById('settingsAvatar').textContent = initial;
+    document.getElementById('settingsName').textContent = fullName;
+    document.getElementById('settingsUsername').textContent = username ? '@' + username : '';
+    var link = 'https://t.me/' + BOT_USERNAME + '?startapp=' + agent.agent_code;
+    document.getElementById('settingsLink').textContent = link;
+    document.getElementById('bottomNav').classList.remove('hidden');
+    switchTab('dashboard');
+    loadDashboard();
+    loadServicesList();
   }
 
-  function renderLink(){
-    const link = `https://t.me/${BOT_USERNAME}?startapp=${agent.agent_code}`;
-    setText("myLink", link);
+  async function loadDashboard(){
+    var today = new Date();
+    var todayStr = today.toISOString().split('T')[0];
+    document.getElementById('todayLabel').textContent = 'Сегодня, ' + today.getDate() + ' ' + MONTHS[today.getMonth()];
 
-    document.getElementById("copyBtn").onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(link);
-        setText("linkStatus", "Скопировано ✅");
-      } catch {
-        setText("linkStatus", "Не удалось скопировать. Скопируйте вручную.");
-      }
-    };
+    var r = await sb.from('bookings').select('id,customer_name,start_time,notified,services(title)').eq('agent_id', agent.id).order('start_time', {ascending: true});
+    if(r.error || !r.data) return;
+    var all = r.data;
+    var todayBookings = all.filter(function(b){ return b.start_time && b.start_time.startsWith(todayStr); });
+    var newCount = all.filter(function(b){ return !b.notified; }).length;
 
-    document.getElementById("openBtn").onclick = () => window.open(link, "_blank");
-  }
+    document.getElementById('statToday').textContent = todayBookings.length;
+    document.getElementById('statTotal').textContent = all.length;
+    document.getElementById('statNew').textContent = newCount;
 
-  async function refreshAll(){
-    await loadServices();
-    await loadBookings();
-  }
+    var timeline = document.getElementById('bookingTimeline');
+    timeline.innerHTML = '<div class="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-800"></div>';
 
-  async function loadServices(){
-    const { data, error } = await sb
-      .from("services")
-      .select("*")
-      .eq("agent_id", agent.id)
-      .order("created_at", { ascending: false });
-
-    const box = document.getElementById("services");
-    box.innerHTML = "";
-    hide("noServices");
-
-    if(error){
-      console.error(error);
-      show("noServices");
-      setText("noServices", "Ошибка загрузки услуг.");
+    if(!todayBookings.length){
+      document.getElementById('noTodayBookings').classList.remove('hidden');
       return;
     }
+    document.getElementById('noTodayBookings').classList.add('hidden');
 
-    if(!data || data.length === 0){
-      show("noServices");
-      return;
-    }
-
-    data.forEach(s => {
-      const div = document.createElement("div");
-      div.className = "listItem";
-      div.innerHTML = `<b>${s.title}</b><div class="muted">${s.duration_min} мин ${s.price ? "• " + s.price : ""}</div>`;
-      box.appendChild(div);
+    todayBookings.forEach(function(b){
+      var dt = new Date(b.start_time);
+      var timeStr = pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+      var isNew = !b.notified;
+      var item = document.createElement('div');
+      item.className = 'relative pl-10';
+      item.innerHTML = '<div class="absolute left-3 top-1.5 w-2.5 h-2.5 rounded-full border-2 border-bg-light dark:border-bg-dark ' + (isNew ? 'bg-primary' : 'bg-slate-400 dark:bg-slate-600') + '"></div>' +
+        '<div class="text-xs font-semibold ' + (isNew ? 'text-primary' : 'text-slate-500 dark:text-slate-400') + ' mb-2">' + timeStr + (isNew ? ' · Новая' : '') + '</div>' +
+        '<div class="bg-card-light dark:bg-card-dark rounded-2xl p-4 border ' + (isNew ? 'border-l-4 border-primary' : 'border-slate-100 dark:border-slate-800') + '">' +
+        '<div class="flex justify-between items-start mb-3"><div><h3 class="font-bold text-base">' + esc(b.customer_name) + '</h3><p class="text-sm text-slate-500 dark:text-slate-400">' + esc((b.services && b.services.title) || 'Услуга') + '</p></div>' +
+        '<span class="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide ' + (isNew ? 'bg-primary/10 text-primary' : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400') + '">' + (isNew ? 'Новая' : 'Подтверждена') + '</span></div></div>';
+      timeline.appendChild(item);
     });
   }
 
-  async function loadBookings(){
-    const { data, error } = await sb
-      .from("bookings")
-      .select("id, customer_name, start_time, services(title)")
-      .eq("agent_id", agent.id)
-      .order("start_time", { ascending: true })
-      .limit(50);
-
-    const box = document.getElementById("bookings");
-    box.innerHTML = "";
-    hide("noBookings");
-
-    if(error){
-      console.error(error);
-      show("noBookings");
-      setText("noBookings", "Ошибка загрузки записей.");
+  async function loadServicesList(){
+    var r = await sb.from('services').select('*').eq('agent_id', agent.id).order('created_at', {ascending: false});
+    var list = document.getElementById('servicesList2');
+    list.innerHTML = '';
+    if(r.error || !r.data || !r.data.length){
+      document.getElementById('noServicesList').classList.remove('hidden');
       return;
     }
-
-    if(!data || data.length === 0){
-      show("noBookings");
-      return;
-    }
-
-    data.forEach(b => {
-      const div = document.createElement("div");
-      div.className = "listItem";
-      const dt = new Date(b.start_time).toLocaleString();
-      div.innerHTML = `<b>${b.customer_name}</b><div class="muted">${b.services?.title || "Услуга"} • ${dt}</div>`;
-      box.appendChild(div);
+    document.getElementById('noServicesList').classList.add('hidden');
+    r.data.forEach(function(s){
+      var div = document.createElement('div');
+      div.className = 'bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800 flex items-center justify-between';
+      div.innerHTML = '<div><h3 class="font-semibold">' + esc(s.title) + '</h3><div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1">' +
+        (s.duration_min ? '<span>' + s.duration_min + ' мин</span>' : '') +
+        (s.price ? '<span>' + s.price + '</span>' : '') + '</div></div>';
+      list.appendChild(div);
     });
   }
 
-  async function addService(){
-    const title = document.getElementById("svcTitle").value.trim();
-    const duration = Number(document.getElementById("svcDuration").value || 0);
-    const priceRaw = document.getElementById("svcPrice").value;
-    const price = priceRaw ? Number(priceRaw) : null;
+  window.addService = async function(){
+    var title = document.getElementById('svcTitle').value.trim();
+    var duration = parseInt(document.getElementById('svcDuration').value) || 0;
+    var price = document.getElementById('svcPrice').value.trim() || null;
+    var status = document.getElementById('svcStatus');
+    if(!title || duration <= 0){ status.textContent = 'Заполните название и длительность'; return; }
+    status.textContent = 'Сохраняем…';
+    var payload = { agent_id: agent.id, title: title, duration_min: duration };
+    if(price) payload.price = price;
+    var r = await sb.from('services').insert(payload);
+    if(r.error){ status.textContent = 'Ошибка: ' + r.error.message; return; }
+    document.getElementById('svcTitle').value = '';
+    document.getElementById('svcDuration').value = '';
+    document.getElementById('svcPrice').value = '';
+    status.textContent = '✓ Услуга добавлена';
+    loadServicesList();
+    setTimeout(function(){ status.textContent = ''; }, 3000);
+  };
 
-    if(!title || duration <= 0){
-      setText("svcStatus", "Заполните название и длительность.");
-      return;
+  window.copyLink = async function(){
+    var link = 'https://t.me/' + BOT_USERNAME + '?startapp=' + (agent && agent.agent_code);
+    try {
+      await navigator.clipboard.writeText(link);
+      document.getElementById('linkStatus').textContent = '✓ Скопировано';
+    } catch(e) {
+      document.getElementById('linkStatus').textContent = 'Скопируйте вручную';
     }
+    setTimeout(function(){ document.getElementById('linkStatus').textContent = ''; }, 3000);
+  };
 
-    setText("svcStatus", "Сохраняю…");
+  window.openLink = function(){
+    var link = 'https://t.me/' + BOT_USERNAME + '?startapp=' + (agent && agent.agent_code);
+    window.open(link, '_blank');
+  };
 
-    const payload = { agent_id: agent.id, title, duration_min: duration };
-    if(price !== null) payload.price = price;
+  function pad(n){ return n < 10 ? '0' + n : '' + n; }
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-    const { error } = await sb.from("services").insert(payload);
-
-    if(error){
-      console.error(error);
-      setText("svcStatus", "Ошибка добавления ❌");
-      return;
-    }
-
-    document.getElementById("svcTitle").value = "";
-    document.getElementById("svcDuration").value = "";
-    document.getElementById("svcPrice").value = "";
-    setText("svcStatus", "Услуга добавлена ✅");
-
-    await loadServices();
+  async function init(){
+    if(!tgUserId){ showScreen('welcome'); return; }
+    var r = await sb.from('agents').select('*').eq('tg_user_id', tgUserId).maybeSingle();
+    if(r.error){ showScreen('welcome'); return; }
+    if(!r.data){ showScreen('welcome'); return; }
+    agent = r.data;
+    initDashboard();
   }
 
   init();
+})();
 </script>
-
 </body>
 </html>
