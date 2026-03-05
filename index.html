@@ -1,199 +1,368 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html class="light" lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Booking</title>
-
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin:0; padding:16px; }
-    h2 { margin: 0 0 8px 0; }
-    .muted { color:#666; font-size:14px; }
-    .card { border:1px solid #eee; border-radius:14px; padding:14px; margin:12px 0; }
-    button { width:100%; padding:12px; border-radius:12px; border:0; font-size:16px; cursor:pointer; }
-    .btn { background:#111; color:#fff; }
-    .btn2 { background:#f2f2f2; color:#111; }
-    input { width:100%; padding:12px; border:1px solid #ddd; border-radius:12px; font-size:16px; box-sizing:border-box; }
-    .hidden { display:none; }
-    .ok { color:#0a7; }
-    .err { color:#b00020; }
-    .serviceBtn { text-align:left; }
-  </style>
+<meta charset="UTF-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Booking</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        primary: "#24A1DE",
+        "bg-light": "#F0F2F5",
+        "bg-dark": "#17212B",
+        "surface-light": "#FFFFFF",
+        "surface-dark": "#242F3D",
+      },
+      fontFamily: { sans: ["Inter", "sans-serif"] },
+    },
+  },
+};
+</script>
+<style>
+body { font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; min-height:100dvh; }
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+</style>
 </head>
+<body class="bg-bg-light dark:bg-bg-dark text-slate-900 dark:text-white transition-colors">
 
-<body>
-  <h2 id="title">Загрузка…</h2>
-  <div id="sub" class="muted"></div>
+<div class="fixed top-0 left-0 right-0 h-0.5 bg-slate-200 dark:bg-slate-700 z-50">
+  <div id="progressBar" class="h-full bg-primary transition-all duration-300" style="width:33%"></div>
+</div>
 
-  <div id="servicesCard" class="card hidden">
-    <div class="muted" style="margin-bottom:10px">Выберите услугу:</div>
-    <div id="servicesList"></div>
-    <div id="noServices" class="muted hidden">У агента пока нет услуг.</div>
+<header class="sticky top-0 z-40 bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center gap-2">
+  <button id="backBtn" onclick="prevStep()" class="p-1 -ml-1 text-primary hidden">
+    <span class="material-icons-round">chevron_left</span>
+  </button>
+  <div class="flex-1">
+    <h1 id="headerTitle" class="text-base font-semibold">Загрузка…</h1>
+    <p id="headerStep" class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">Шаг 1 из 3</p>
+  </div>
+  <span id="headerBadge" class="hidden bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Открыто</span>
+</header>
+
+<main class="pb-32">
+
+  <div id="viewError" class="hidden px-4 pt-16 text-center">
+    <span class="material-icons-round text-5xl text-slate-300 dark:text-slate-600">link_off</span>
+    <p id="errorText" class="mt-3 text-slate-500 dark:text-slate-400 text-sm"></p>
   </div>
 
-  <div id="formCard" class="card hidden">
-    <div id="picked" style="font-weight:700; margin-bottom:10px"></div>
-    <input id="customerName" placeholder="Ваше имя" />
-    <div style="height:10px"></div>
-    <input id="bookingTime" type="datetime-local" />
-    <div style="height:12px"></div>
-    <button id="bookBtn" class="btn">Записаться</button>
-    <div id="status" class="muted" style="margin-top:10px"></div>
-    <div style="height:10px"></div>
-    <button id="backBtn" class="btn2">Выбрать другую услугу</button>
+  <!-- STEP 1: SERVICES -->
+  <div id="step1" class="hidden">
+    <div class="px-4 pt-5 pb-3">
+      <div class="relative">
+        <span class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+        <input id="searchInput" oninput="filterServices()" type="text" placeholder="Поиск услуг…"
+          class="w-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+      </div>
+    </div>
+    <div id="servicesList" class="px-4 space-y-3 pb-4"></div>
+    <p id="noServices" class="hidden px-4 text-sm text-slate-400 dark:text-slate-500 text-center py-8">Услуг пока нет.</p>
   </div>
+
+  <!-- STEP 2: DATE + TIME -->
+  <div id="step2" class="hidden">
+    <section class="mt-4">
+      <div class="px-4 mb-3 flex justify-between items-center">
+        <h2 class="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Выберите дату</h2>
+        <span id="monthLabel" class="text-sm font-medium text-primary"></span>
+      </div>
+      <div id="dateCarousel" class="flex overflow-x-auto gap-3 px-4 pb-2 no-scrollbar"></div>
+    </section>
+    <section class="mt-6 px-4">
+      <div id="slotsContainer"></div>
+    </section>
+    <div id="selectionPreview" class="hidden mx-4 mt-4 bg-primary/10 border border-primary/20 rounded-2xl p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white flex-shrink-0">
+        <span class="material-icons-round text-xl">event_available</span>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-primary">Ваш выбор</h3>
+        <p id="selectionText" class="text-xs text-slate-600 dark:text-slate-400"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: CONFIRM -->
+  <div id="step3" class="hidden px-4 pt-5 space-y-4">
+    <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-700 space-y-3">
+      <div class="flex items-center gap-3">
+        <span class="material-icons-round text-primary">medical_services</span>
+        <div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Услуга</p>
+          <p id="confirmService" class="font-semibold text-sm"></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="material-icons-round text-primary">schedule</span>
+        <div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Дата и время</p>
+          <p id="confirmTime" class="font-semibold text-sm"></p>
+        </div>
+      </div>
+    </div>
+    <div>
+      <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 block">Ваше имя</label>
+      <input id="customerName" type="text" placeholder="Введите имя…"
+        class="w-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+    </div>
+    <div id="bookStatus" class="hidden text-center text-sm py-3 rounded-xl"></div>
+  </div>
+
+</main>
+
+<footer class="fixed bottom-0 left-0 right-0 p-4 bg-surface-light dark:bg-surface-dark border-t border-slate-200 dark:border-slate-700 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]" id="footer" style="padding-bottom:max(16px,env(safe-area-inset-bottom))">
+  <button id="footerBtn" onclick="nextStep()" class="w-full bg-primary text-white py-4 rounded-2xl font-semibold text-base active:scale-[0.98] transition-all flex items-center justify-center gap-2 opacity-50 pointer-events-none">
+    Далее <span class="material-icons-round">arrow_forward</span>
+  </button>
+</footer>
 
 <script>
-(function () {
-  const tg = window.Telegram?.WebApp;
-  if (tg) { tg.expand(); tg.ready(); }
+(function(){
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if(tg){ tg.expand(); tg.ready(); }
+  if(tg && tg.colorScheme === 'dark') document.documentElement.classList.add('dark');
 
-  // На экран выводим любые ошибки (чтобы не было "просто загрузка")
-  const fatal = (msg) => {
-    document.getElementById("title").textContent = "Ошибка";
-    document.getElementById("sub").textContent = msg;
-  };
-  window.addEventListener("error", (e) => fatal(e?.message || "JS error"));
-  window.addEventListener("unhandledrejection", (e) => fatal(e?.reason?.message || "Promise error"));
-
-  const show = (id) => document.getElementById(id).classList.remove("hidden");
-  const hide = (id) => document.getElementById(id).classList.add("hidden");
-  const setStatus = (text, cls="muted") => {
-    const el = document.getElementById("status");
-    el.className = cls;
-    el.textContent = text || "";
-  };
-
-  // ====== CONFIG ======
   const SUPABASE_URL = "https://uuiprnacqstiwfuxvyet.supabase.co";
   const SUPABASE_KEY = "sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs";
-
-  // клиент Supabase — НЕ называем "supabase" (чтобы не ловить конфликт)
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // agentCode приходит только из deep link: https://t.me/<bot>?startapp=CODE
-  const agentCode = tg?.initDataUnsafe?.start_param || null;
+  const agentCode = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || null;
+  const customerTgId = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || null;
+  const customerUsername = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.username) || null;
+  const fn = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || '';
+  const ln = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.last_name) || '';
+  const customerFullName = [fn, ln].filter(Boolean).join(' ') || null;
 
-  // данные клиента (для уведомлений через n8n)
-  const customerTgId = tg?.initDataUnsafe?.user?.id || null;
-  const customerUsername = tg?.initDataUnsafe?.user?.username || null;
-  const customerFullName = [tg?.initDataUnsafe?.user?.first_name, tg?.initDataUnsafe?.user?.last_name].filter(Boolean).join(" ") || null;
-
-  let agentId = null;
+  let step = 1;
+  let agent = null;
+  let allServices = [];
   let selectedService = null;
+  let selectedDate = null;
+  let selectedTime = null;
 
-  async function init() {
-    document.getElementById("title").textContent = "Загрузка…";
-    document.getElementById("sub").textContent = "";
+  const DAYS = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const MONTHS_G = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const MORNING = ['09:00','09:30','10:00','10:30','11:00','11:30'];
+  const AFTERNOON = ['13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00'];
+  const EVENING = ['18:00','18:30','19:00'];
 
-    if (!agentCode) {
-      document.getElementById("title").textContent = "Ссылка агента не указана";
-      document.getElementById("sub").textContent = "Откройте ссылку вида: t.me/<bot>?startapp=CODE";
+  function showError(msg){
+    document.getElementById('viewError').classList.remove('hidden');
+    document.getElementById('errorText').textContent = msg;
+    document.getElementById('footer').classList.add('hidden');
+  }
+
+  function setFooter(text, enabled){
+    const btn = document.getElementById('footerBtn');
+    btn.innerHTML = text + ' <span class="material-icons-round">arrow_forward</span>';
+    if(enabled){
+      btn.classList.remove('opacity-50','pointer-events-none');
+    } else {
+      btn.classList.add('opacity-50','pointer-events-none');
+    }
+  }
+
+  function showStep(n){
+    step = n;
+    document.getElementById('step1').classList.toggle('hidden', n !== 1);
+    document.getElementById('step2').classList.toggle('hidden', n !== 2);
+    document.getElementById('step3').classList.toggle('hidden', n !== 3);
+    document.getElementById('progressBar').style.width = (n/3*100) + '%';
+    document.getElementById('headerStep').textContent = 'Шаг ' + n + ' из 3';
+    document.getElementById('backBtn').classList.toggle('hidden', n === 1);
+
+    if(n === 1){
+      setFooter('Далее', !!selectedService);
+    } else if(n === 2){
+      setFooter('Далее', !!(selectedDate && selectedTime));
+    } else {
+      var svc = selectedService;
+      document.getElementById('confirmService').textContent = svc.title + (svc.price ? ' · ' + svc.price : '');
+      var dt = new Date(selectedDate + 'T' + selectedTime);
+      document.getElementById('confirmTime').textContent = dt.getDate() + ' ' + MONTHS_G[dt.getMonth()] + ', ' + selectedTime;
+      setFooter('Подтвердить запись', true);
+    }
+  }
+
+  window.nextStep = function(){
+    if(step === 1 && selectedService) showStep(2);
+    else if(step === 2 && selectedDate && selectedTime) showStep(3);
+    else if(step === 3) book();
+  };
+
+  window.prevStep = function(){
+    if(step > 1) showStep(step - 1);
+  };
+
+  window.filterServices = function(){
+    var q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('.service-card').forEach(function(el){
+      el.classList.toggle('hidden', el.dataset.title.indexOf(q) === -1);
+    });
+  };
+
+  function renderServices(){
+    var list = document.getElementById('servicesList');
+    list.innerHTML = '';
+    if(!allServices.length){
+      document.getElementById('noServices').classList.remove('hidden');
       return;
     }
-
-    // 1) Агент
-    const { data: agent, error: e1 } = await sb
-      .from("agents")
-      .select("id, full_name, username, agent_code")
-      .eq("agent_code", agentCode)
-      .maybeSingle();
-
-    if (e1) return fatal("Supabase agents error: " + e1.message);
-    if (!agent) {
-      document.getElementById("title").textContent = "Агент не найден";
-      document.getElementById("sub").textContent = "Проверьте правильность ссылки агента.";
-      return;
-    }
-
-    agentId = agent.id;
-    document.getElementById("title").textContent = "Запись к " + (agent.full_name || agent.username || "агенту");
-    document.getElementById("sub").textContent = "Выберите услугу и время.";
-
-    // 2) Услуги
-    const { data: services, error: e2 } = await sb
-      .from("services")
-      .select("id, title, duration_min, price")
-      .eq("agent_id", agentId)
-      .order("created_at", { ascending: false });
-
-    if (e2) return fatal("Supabase services error: " + e2.message);
-
-    show("servicesCard");
-    const list = document.getElementById("servicesList");
-    list.innerHTML = "";
-    hide("noServices");
-
-    if (!services || services.length === 0) {
-      show("noServices");
-      return;
-    }
-
-    services.forEach(s => {
-      const btn = document.createElement("button");
-      btn.className = "btn2 serviceBtn";
-      btn.style.margin = "8px 0";
-      btn.innerHTML = `<b>${escapeHtml(s.title)}</b><div class="muted">${s.duration_min || 0} мин ${s.price ? "• " + s.price : ""}</div>`;
-      btn.addEventListener("click", () => {
-        selectedService = s;
-        document.getElementById("picked").textContent = "Вы выбрали: " + s.title;
-        show("formCard");
-        setStatus("");
-      });
-      list.appendChild(btn);
+    allServices.forEach(function(s){
+      var div = document.createElement('div');
+      div.className = 'service-card bg-surface-light dark:bg-surface-dark p-4 rounded-2xl flex items-center justify-between border border-slate-100 dark:border-slate-700';
+      div.dataset.title = (s.title || '').toLowerCase();
+      var dur = s.duration_min ? '<span class="flex items-center gap-1"><span class="material-icons-round text-sm">schedule</span>' + s.duration_min + ' мин</span>' : '';
+      var price = s.price ? '<span class="flex items-center gap-1"><span class="material-icons-round text-sm">payments</span>' + s.price + '</span>' : '';
+      div.innerHTML = '<div class="flex-1"><h3 class="font-semibold text-base mb-1">' + esc(s.title) + '</h3><div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">' + dur + price + '</div></div><button onclick="selectService(' + s.id + ')" data-id="' + s.id + '" class="svc-btn ml-3 bg-primary text-white font-semibold px-4 py-2 rounded-xl text-sm active:opacity-80">Выбрать</button>';
+      list.appendChild(div);
     });
   }
 
-  async function book() {
-    if (!selectedService) return alert("Выберите услугу");
-    const name = document.getElementById("customerName").value.trim();
-    const time = document.getElementById("bookingTime").value;
+  window.selectService = function(id){
+    selectedService = allServices.find(function(s){ return s.id === id; });
+    document.querySelectorAll('.svc-btn').forEach(function(btn){
+      var active = parseInt(btn.dataset.id) === id;
+      btn.className = 'svc-btn ml-3 font-semibold px-4 py-2 rounded-xl text-sm active:opacity-80 ' + (active ? 'bg-green-500 text-white' : 'bg-primary text-white');
+      btn.textContent = active ? '✓ Выбрано' : 'Выбрать';
+    });
+    setFooter('Далее', true);
+  };
 
-    if (!name || !time) return alert("Заполните имя и время");
+  function renderDateCarousel(){
+    var carousel = document.getElementById('dateCarousel');
+    carousel.innerHTML = '';
+    var today = new Date();
+    document.getElementById('monthLabel').textContent = MONTHS[today.getMonth()] + ' ' + today.getFullYear();
+    for(var i = 0; i < 14; i++){
+      (function(i){
+        var d = new Date(today);
+        d.setDate(today.getDate() + i);
+        var dateStr = d.toISOString().split('T')[0];
+        var btn = document.createElement('button');
+        btn.className = 'date-btn flex-shrink-0 w-16 h-20 flex flex-col items-center justify-center rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-100 dark:border-slate-700 active:scale-95 transition-all';
+        btn.dataset.date = dateStr;
+        btn.innerHTML = '<span class="text-xs text-slate-400 dark:text-slate-500">' + DAYS[d.getDay()] + '</span><span class="text-lg font-bold">' + d.getDate() + '</span>';
+        btn.onclick = function(){ selectDate(dateStr); };
+        carousel.appendChild(btn);
+      })(i);
+    }
+  }
 
-    setStatus("Записываем…");
+  window.selectDate = function(dateStr){
+    selectedDate = dateStr;
+    selectedTime = null;
+    document.querySelectorAll('.date-btn').forEach(function(btn){
+      var active = btn.dataset.date === dateStr;
+      btn.className = 'date-btn flex-shrink-0 w-16 h-20 flex flex-col items-center justify-center rounded-2xl active:scale-95 transition-all ' + (active ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-surface-light dark:bg-surface-dark border border-slate-100 dark:border-slate-700');
+    });
+    renderSlots();
+    document.getElementById('selectionPreview').classList.add('hidden');
+    setFooter('Далее', false);
+  };
 
-    const { error } = await sb.from("bookings").insert({
-      agent_id: agentId,
+  function renderSlots(){
+    var c = document.getElementById('slotsContainer');
+    c.innerHTML = '';
+    var sections = [
+      {icon:'wb_sunny', label:'Утро', slots:MORNING},
+      {icon:'light_mode', label:'День', slots:AFTERNOON},
+      {icon:'bedtime', label:'Вечер', slots:EVENING}
+    ];
+    sections.forEach(function(sec){
+      var wrapper = document.createElement('div');
+      wrapper.className = 'mb-6';
+      wrapper.innerHTML = '<div class="flex items-center gap-2 mb-3"><span class="material-icons-round text-slate-400 text-sm">' + sec.icon + '</span><h2 class="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-tight">' + sec.label + '</h2></div>';
+      var grid = document.createElement('div');
+      grid.className = 'grid grid-cols-3 gap-3';
+      sec.slots.forEach(function(t){
+        var btn = document.createElement('button');
+        btn.className = 'time-btn py-3 px-4 rounded-xl bg-surface-light dark:bg-surface-dark text-center font-medium border border-slate-100 dark:border-slate-700 active:scale-95 transition-all';
+        btn.dataset.time = t;
+        btn.textContent = t;
+        btn.onclick = function(){ selectTime(t); };
+        grid.appendChild(btn);
+      });
+      wrapper.appendChild(grid);
+      c.appendChild(wrapper);
+    });
+  }
+
+  window.selectTime = function(time){
+    selectedTime = time;
+    document.querySelectorAll('.time-btn').forEach(function(btn){
+      var active = btn.dataset.time === time;
+      btn.className = 'time-btn py-3 px-4 rounded-xl text-center font-medium active:scale-95 transition-all ' + (active ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-surface-light dark:bg-surface-dark border border-slate-100 dark:border-slate-700');
+    });
+    var d = new Date(selectedDate + 'T' + time);
+    document.getElementById('selectionText').textContent = DAYS[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS_G[d.getMonth()] + ' в ' + time;
+    document.getElementById('selectionPreview').classList.remove('hidden');
+    setFooter('Далее', true);
+  };
+
+  async function book(){
+    var name = document.getElementById('customerName').value.trim();
+    if(!name){ alert('Введите ваше имя'); return; }
+    var statusEl = document.getElementById('bookStatus');
+    statusEl.className = 'text-center text-sm py-3 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
+    statusEl.textContent = 'Записываем…';
+    statusEl.classList.remove('hidden');
+    setFooter('Записываем…', false);
+
+    var payload = {
+      agent_id: agent.id,
       service_id: selectedService.id,
       customer_name: name,
-      start_time: time,
+      start_time: selectedDate + 'T' + selectedTime + ':00',
       customer_tg_id: customerTgId,
       customer_username: customerUsername,
       customer_full_name: customerFullName,
       notified: false
-    });
-
-    if (error) {
-      console.error(error);
-      setStatus("Ошибка записи: " + error.message, "err");
+    };
+    var result = await sb.from('bookings').insert(payload);
+    if(result.error){
+      statusEl.className = 'text-center text-sm py-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600';
+      statusEl.textContent = 'Ошибка: ' + result.error.message;
+      setFooter('Подтвердить запись', true);
       return;
     }
-
-    setStatus("Вы записаны ✅", "ok");
-    tg?.HapticFeedback?.notificationOccurred?.("success");
+    statusEl.className = 'text-center text-sm py-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 font-semibold';
+    statusEl.textContent = '✓ Вы записаны!';
+    document.getElementById('footerBtn').classList.add('hidden');
+    if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    setTimeout(function(){ if(tg && tg.close) tg.close(); }, 2000);
   }
 
-  function reset() {
-    selectedService = null;
-    hide("formCard");
-    setStatus("");
+  function esc(s){
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  function escapeHtml(str) {
-    return String(str || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
+  async function init(){
+    if(!agentCode){ showError('Ссылка агента не указана. Откройте через ссылку вида t.me/bot?startapp=CODE'); return; }
+    var r1 = await sb.from('agents').select('id,full_name,username,agent_code').eq('agent_code', agentCode).maybeSingle();
+    if(r1.error || !r1.data){ showError(r1.data === null ? 'Агент не найден.' : 'Ошибка: ' + (r1.error && r1.error.message)); return; }
+    agent = r1.data;
+    document.getElementById('headerTitle').textContent = 'Запись к ' + (agent.full_name || agent.username || 'агенту');
+    document.getElementById('headerBadge').classList.remove('hidden');
 
-  document.getElementById("bookBtn").addEventListener("click", book);
-  document.getElementById("backBtn").addEventListener("click", reset);
+    var r2 = await sb.from('services').select('id,title,duration_min,price').eq('agent_id', agent.id).order('created_at', {ascending: false});
+    if(r2.error){ showError('Ошибка загрузки услуг: ' + r2.error.message); return; }
+    allServices = r2.data || [];
+    renderServices();
+    renderDateCarousel();
+    showStep(1);
+  }
 
   init();
 })();
