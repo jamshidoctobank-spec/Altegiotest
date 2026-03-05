@@ -11,378 +11,656 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
 <script>
 tailwind.config = {
-  darkMode: "class",
-  theme: {
-    extend: {
-      colors: {
-        primary: "#24A1DE",
-        "bg-light": "#F2F2F7",
-        "bg-dark": "#0F0F0F",
-        "card-light": "#FFFFFF",
-        "card-dark": "#1C1C1E",
-      },
-      fontFamily: { sans: ["Inter", "sans-serif"] },
-    },
-  },
+  darkMode:"class",
+  theme:{ extend:{ colors:{ primary:"#24A1DE","bg-light":"#F2F2F7","bg-dark":"#0F0F0F","card-light":"#FFFFFF","card-dark":"#1C1C1E" }, fontFamily:{ sans:["Inter","sans-serif"] } } }
 };
 </script>
 <style>
-body { font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; min-height:100dvh; }
-.no-scrollbar::-webkit-scrollbar{display:none}
-.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+body{font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent;min-height:100dvh}
+.no-sb::-webkit-scrollbar{display:none}.no-sb{-ms-overflow-style:none;scrollbar-width:none}
+.cal-day{min-height:40px}
 </style>
 </head>
 <body class="bg-bg-light dark:bg-bg-dark text-slate-900 dark:text-white transition-colors">
 
-<!-- WELCOME SCREEN (not registered) -->
-<div id="screenWelcome" class="hidden min-h-screen flex flex-col items-center justify-center px-6 text-center">
+<!-- ── WELCOME ── -->
+<div id="sWelcome" class="hidden min-h-screen flex flex-col items-center justify-center px-6 text-center">
   <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
     <span class="material-icons-outlined text-4xl text-primary">waving_hand</span>
   </div>
   <h1 class="text-2xl font-bold mb-2">Добро пожаловать!</h1>
-  <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Вы впервые здесь. Выберите что хотите сделать.</p>
+  <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">Выберите что хотите сделать.</p>
   <div class="w-full max-w-sm space-y-3">
     <button onclick="showMyBookings()" class="w-full bg-card-light dark:bg-card-dark border border-slate-200 dark:border-slate-700 rounded-2xl p-4 flex items-center gap-4 text-left active:scale-[0.98] transition-transform">
       <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
         <span class="material-icons-outlined text-primary text-2xl">calendar_today</span>
       </div>
-      <div>
-        <p class="font-semibold">Мои записи</p>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Посмотреть мои записи к специалистам</p>
-      </div>
+      <div><p class="font-semibold">Мои записи</p><p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Посмотреть записи к специалистам</p></div>
     </button>
-    <button onclick="registerAgent()" class="w-full bg-primary rounded-2xl p-4 flex items-center gap-4 text-left active:scale-[0.98] transition-transform text-white shadow-lg shadow-primary/25">
+    <button onclick="show('sReg1')" class="w-full bg-primary rounded-2xl p-4 flex items-center gap-4 text-left active:scale-[0.98] transition-transform text-white shadow-lg shadow-primary/25">
       <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
         <span class="material-icons-outlined text-white text-2xl">storefront</span>
       </div>
-      <div>
-        <p class="font-semibold">Стать агентом</p>
-        <p class="text-xs text-white/70 mt-0.5">Принимать записи и предоставлять услуги</p>
-      </div>
+      <div><p class="font-semibold">Стать агентом</p><p class="text-xs text-white/70 mt-0.5">Принимать записи и предоставлять услуги</p></div>
     </button>
   </div>
-  <div id="welcomeStatus" class="mt-4 text-sm text-slate-500 dark:text-slate-400"></div>
 </div>
 
-<!-- MY BOOKINGS SCREEN (client view) -->
-<div id="screenMyBookings" class="hidden">
-  <header class="px-4 pt-6 pb-4 sticky top-0 z-40 bg-bg-light dark:bg-bg-dark border-b border-slate-200 dark:border-slate-800">
-    <div class="flex items-center gap-3 mb-1">
-      <button onclick="showScreen('welcome')" class="text-primary p-1 -ml-1">
-        <span class="material-icons-outlined">chevron_left</span>
-      </button>
-      <h1 class="text-xl font-bold">Мои записи</h1>
-    </div>
+<!-- ── REGISTRATION STEP 1 ── -->
+<div id="sReg1" class="hidden min-h-screen flex flex-col">
+  <header class="px-4 pt-6 pb-4 flex items-center gap-3">
+    <button onclick="show('sWelcome')" class="text-primary p-1 -ml-1"><span class="material-icons-outlined">chevron_left</span></button>
+    <div><h1 class="text-xl font-bold">Регистрация</h1><p class="text-xs text-slate-500 dark:text-slate-400">Шаг 1 из 2 — Профиль</p></div>
   </header>
-  <main class="p-4">
+  <div class="flex-1 px-4 space-y-4 pb-8">
+    <div class="flex justify-center py-4">
+      <div id="regAvatar" class="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white text-3xl font-bold select-none">?</div>
+    </div>
+    <div>
+      <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5 block">Ваше имя</label>
+      <input id="regName" type="text" placeholder="Иван Иванов" oninput="updateRegAvatar()"
+        class="w-full bg-card-light dark:bg-card-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+    </div>
+    <div>
+      <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5 block">Специализация / Название организации</label>
+      <input id="regSpecialty" type="text" placeholder="Напр.: Парикмахер, Фитнес-тренер, Клиника…"
+        class="w-full bg-card-light dark:bg-card-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+    </div>
+    <div id="reg1Status" class="text-sm text-red-500 min-h-5"></div>
+  </div>
+  <div class="px-4 pb-8" style="padding-bottom:max(32px,env(safe-area-inset-bottom))">
+    <button onclick="goReg2()" class="w-full bg-primary text-white py-4 rounded-2xl font-semibold text-base active:scale-[0.98] flex items-center justify-center gap-2">
+      Далее <span class="material-icons-outlined">arrow_forward</span>
+    </button>
+  </div>
+</div>
+
+<!-- ── REGISTRATION STEP 2 ── -->
+<div id="sReg2" class="hidden min-h-screen flex flex-col">
+  <header class="px-4 pt-6 pb-4 flex items-center gap-3">
+    <button onclick="show('sReg1')" class="text-primary p-1 -ml-1"><span class="material-icons-outlined">chevron_left</span></button>
+    <div><h1 class="text-xl font-bold">Ваши услуги</h1><p class="text-xs text-slate-500 dark:text-slate-400">Шаг 2 из 2 — Добавьте минимум 2 услуги</p></div>
+  </header>
+  <div class="flex-1 px-4 pb-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800 mb-4">
+      <input id="rs_title" type="text" placeholder="Название услуги"
+        class="w-full bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-primary"/>
+      <div class="flex gap-3 mb-3">
+        <input id="rs_dur" type="number" min="5" step="5" placeholder="Мин"
+          class="flex-1 bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+        <input id="rs_price" type="text" placeholder="Цена (опц.)"
+          class="flex-1 bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+      </div>
+      <button onclick="addRegService()" class="w-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 py-3 rounded-xl font-semibold text-sm active:opacity-80 flex items-center justify-center gap-1">
+        <span class="material-icons-outlined text-sm">add</span> Добавить услугу
+      </button>
+    </div>
+    <div id="regServicesList" class="space-y-2"></div>
+    <p id="reg2Status" class="text-sm text-red-500 mt-3 min-h-5"></p>
+  </div>
+  <div class="px-4" style="padding-bottom:max(32px,env(safe-area-inset-bottom))">
+    <button onclick="finishReg()" class="w-full bg-primary text-white py-4 rounded-2xl font-semibold text-base active:scale-[0.98] flex items-center justify-center gap-2">
+      <span class="material-icons-outlined">check</span> Зарегистрироваться
+    </button>
+  </div>
+</div>
+
+<!-- ── MY BOOKINGS (client view) ── -->
+<div id="sMyBookings" class="hidden">
+  <header class="px-4 pt-6 pb-4 sticky top-0 z-40 bg-bg-light dark:bg-bg-dark border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+    <button type="button" onclick="show('sWelcome')" class="text-primary p-2 -ml-2"><span class="material-icons-outlined">chevron_left</span></button>
+    <h1 class="text-xl font-bold">Мои записи</h1>
+  </header>
+  <main class="p-4 pb-8">
     <div id="myBookingsList" class="space-y-3"></div>
     <div id="noMyBookings" class="hidden text-center py-16">
       <span class="material-icons-outlined text-5xl text-slate-300 dark:text-slate-600">event_busy</span>
       <p class="mt-3 text-slate-500 dark:text-slate-400 text-sm">Записей пока нет.</p>
-      <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Запишитесь к специалисту через его ссылку</p>
+      <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Запишитесь через ссылку специалиста</p>
     </div>
   </main>
 </div>
 
-<!-- DASHBOARD SCREEN (registered agent) -->
-<div id="screenDashboard" class="hidden">
-  <div class="h-11 w-full bg-bg-light dark:bg-bg-dark sticky top-0 z-50"></div>
+<!-- ── DASHBOARD ── -->
+<div id="sDashboard" class="hidden">
+  <div class="h-11 sticky top-0 z-50 bg-bg-light dark:bg-bg-dark"></div>
   <header class="px-4 pb-4 bg-bg-light dark:bg-bg-dark sticky top-11 z-40 border-b border-slate-200 dark:border-slate-800">
     <div class="flex items-center justify-between mb-4 pt-2">
-      <h1 class="text-2xl font-bold tracking-tight">Панель агента</h1>
-      <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm" id="agentAvatar">A</div>
+      <div>
+        <h1 class="text-2xl font-bold">Панель агента</h1>
+        <p id="dashSpecialty" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5"></p>
+      </div>
+      <div id="dashAvatar" class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">A</div>
     </div>
-    <div class="flex gap-3 overflow-x-auto no-scrollbar">
-      <div class="flex-shrink-0 bg-primary/10 dark:bg-primary/20 border border-primary/20 rounded-2xl px-4 py-3 min-w-[110px]">
-        <span class="block text-primary text-xs font-semibold uppercase tracking-wider mb-1">Сегодня</span>
+    <div class="flex gap-3 overflow-x-auto no-sb">
+      <div class="flex-shrink-0 bg-primary/10 dark:bg-primary/20 border border-primary/20 rounded-2xl px-4 py-3 min-w-[100px]">
+        <span class="block text-primary text-[10px] font-semibold uppercase tracking-wider mb-1">Сегодня</span>
         <span id="statToday" class="text-xl font-bold text-primary">0</span>
       </div>
-      <div class="flex-shrink-0 bg-green-500/10 dark:bg-green-500/20 border border-green-500/20 rounded-2xl px-4 py-3 min-w-[110px]">
-        <span class="block text-green-600 dark:text-green-400 text-xs font-semibold uppercase tracking-wider mb-1">Всего</span>
+      <div class="flex-shrink-0 bg-green-500/10 dark:bg-green-500/20 border border-green-500/20 rounded-2xl px-4 py-3 min-w-[100px]">
+        <span class="block text-green-600 dark:text-green-400 text-[10px] font-semibold uppercase tracking-wider mb-1">Всего</span>
         <span id="statTotal" class="text-xl font-bold text-green-600 dark:text-green-400">0</span>
       </div>
-      <div class="flex-shrink-0 bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/20 rounded-2xl px-4 py-3 min-w-[110px]">
-        <span class="block text-amber-600 dark:text-amber-400 text-xs font-semibold uppercase tracking-wider mb-1">Новых</span>
+      <div class="flex-shrink-0 bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/20 rounded-2xl px-4 py-3 min-w-[100px]">
+        <span class="block text-amber-600 dark:text-amber-400 text-[10px] font-semibold uppercase tracking-wider mb-1">Новых</span>
         <span id="statNew" class="text-xl font-bold text-amber-600 dark:text-amber-400">0</span>
       </div>
     </div>
   </header>
+  <main class="p-4 pb-28" id="dashMain"></main>
+</div>
+
+<!-- ── CALENDAR ── -->
+<div id="sCalendar" class="hidden">
+  <div class="h-11 sticky top-0 z-50 bg-bg-light dark:bg-bg-dark"></div>
+  <header class="px-4 pb-4 bg-bg-light dark:bg-bg-dark sticky top-11 z-40 border-b border-slate-200 dark:border-slate-800 pt-2">
+    <div class="flex items-center justify-between mb-3">
+      <h1 class="text-2xl font-bold">Календарь</h1>
+      <div class="flex items-center gap-2">
+        <button onclick="calPrev()" class="w-8 h-8 flex items-center justify-center rounded-full bg-card-light dark:bg-card-dark border border-slate-200 dark:border-slate-700 active:scale-90">
+          <span class="material-icons-outlined text-sm">chevron_left</span>
+        </button>
+        <span id="calMonthLabel" class="text-sm font-semibold w-28 text-center"></span>
+        <button onclick="calNext()" class="w-8 h-8 flex items-center justify-center rounded-full bg-card-light dark:bg-card-dark border border-slate-200 dark:border-slate-700 active:scale-90">
+          <span class="material-icons-outlined text-sm">chevron_right</span>
+        </button>
+      </div>
+    </div>
+    <div class="grid grid-cols-7 text-center text-[10px] font-semibold text-slate-400 dark:text-slate-500 mb-1">
+      <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+    </div>
+    <div id="calGrid" class="grid grid-cols-7 gap-1"></div>
+  </header>
   <main class="p-4 pb-28">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold" id="todayLabel">Сегодня</h2>
-    </div>
-    <div id="bookingTimeline" class="relative space-y-4">
-      <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-800"></div>
-    </div>
-    <div id="noTodayBookings" class="hidden text-center py-12">
-      <span class="material-icons-outlined text-5xl text-slate-300 dark:text-slate-600">event_available</span>
-      <p class="mt-3 text-slate-500 dark:text-slate-400 text-sm">Записей на сегодня нет</p>
-    </div>
+    <div id="calDayBookings"></div>
   </main>
 </div>
 
-<!-- SERVICES SCREEN -->
-<div id="screenServices" class="hidden">
-  <header class="px-4 pt-6 pb-4 sticky top-0 z-40 bg-bg-light dark:bg-bg-dark border-b border-slate-200 dark:border-slate-800">
-    <h1 class="text-2xl font-bold tracking-tight">Мои услуги</h1>
+<!-- ── SERVICES ── -->
+<div id="sServices" class="hidden">
+  <div class="h-11 sticky top-0 z-50 bg-bg-light dark:bg-bg-dark"></div>
+  <header class="px-4 pb-4 bg-bg-light dark:bg-bg-dark sticky top-11 z-40 border-b border-slate-200 dark:border-slate-800 pt-2">
+    <h1 class="text-2xl font-bold">Мои услуги</h1>
   </header>
   <main class="p-4 pb-28 space-y-4">
     <div class="bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
-      <h3 class="font-semibold mb-3 text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide">Добавить услугу</h3>
-      <input id="svcTitle" type="text" placeholder="Название (напр.: Консультация)"
+      <h3 class="font-semibold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Добавить услугу</h3>
+      <input id="svcTitle" type="text" placeholder="Название"
         class="w-full bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-primary"/>
       <div class="flex gap-3 mb-3">
-        <input id="svcDuration" type="number" min="5" step="5" placeholder="Мин"
+        <input id="svcDur" type="number" min="5" step="5" placeholder="Минут"
           class="flex-1 bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
-        <input id="svcPrice" type="text" placeholder="Цена (опц.)"
+        <input id="svcPrice" type="text" placeholder="Цена"
           class="flex-1 bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
       </div>
       <button onclick="addService()" class="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm active:opacity-80">Добавить</button>
-      <p id="svcStatus" class="text-center text-xs mt-2 text-slate-500 dark:text-slate-400 min-h-4"></p>
+      <p id="svcStatus" class="text-center text-xs mt-2 text-slate-500 min-h-4"></p>
     </div>
-    <div id="servicesList2" class="space-y-3"></div>
-    <div id="noServicesList" class="hidden text-center py-8 text-slate-400 dark:text-slate-500 text-sm">Услуг пока нет.</div>
+    <div id="svcList" class="space-y-3"></div>
+    <p id="noSvcList" class="hidden text-center py-8 text-slate-400 text-sm">Услуг пока нет.</p>
   </main>
 </div>
 
-<!-- SETTINGS SCREEN -->
-<div id="screenSettings" class="hidden">
-  <header class="px-4 pt-6 pb-4 sticky top-0 z-40 bg-bg-light dark:bg-bg-dark border-b border-slate-200 dark:border-slate-800">
-    <h1 class="text-2xl font-bold tracking-tight">Настройки</h1>
+<!-- ── SETTINGS ── -->
+<div id="sSettings" class="hidden">
+  <div class="h-11 sticky top-0 z-50 bg-bg-light dark:bg-bg-dark"></div>
+  <header class="px-4 pb-4 bg-bg-light dark:bg-bg-dark sticky top-11 z-40 border-b border-slate-200 dark:border-slate-800 pt-2">
+    <h1 class="text-2xl font-bold">Настройки</h1>
   </header>
   <main class="p-4 pb-28 space-y-4">
+    <!-- Profile -->
     <div class="bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
-      <h3 class="font-semibold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Ваша ссылка для клиентов</h3>
+      <div class="flex items-center gap-3 mb-4">
+        <div id="settingsAvatar" class="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xl">A</div>
+        <div>
+          <p class="font-bold text-base" id="settingsName"></p>
+          <p class="text-sm text-slate-500 dark:text-slate-400" id="settingsSpecialty"></p>
+          <p class="text-xs text-slate-400 dark:text-slate-500" id="settingsUsername"></p>
+        </div>
+      </div>
+      <h3 class="font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Ссылка для клиентов</h3>
       <div class="font-mono text-xs bg-bg-light dark:bg-bg-dark rounded-xl p-3 break-all text-slate-600 dark:text-slate-300 mb-3" id="settingsLink"></div>
       <div class="flex gap-3">
         <button onclick="copyLink()" class="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-semibold active:opacity-80">Скопировать</button>
         <button onclick="openLink()" class="flex-1 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 text-sm font-semibold active:opacity-80">Открыть</button>
       </div>
-      <p id="linkStatus" class="text-center text-xs mt-2 text-slate-500 min-h-4"></p>
+      <p id="linkStatus" class="text-center text-xs mt-2 text-green-500 min-h-4"></p>
     </div>
+
+    <!-- Working hours -->
     <div class="bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
-      <h3 class="font-semibold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Профиль</h3>
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg" id="settingsAvatar">A</div>
-        <div>
-          <p class="font-semibold" id="settingsName"></p>
-          <p class="text-xs text-slate-500 dark:text-slate-400" id="settingsUsername"></p>
-        </div>
-      </div>
+      <h3 class="font-semibold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">Рабочие часы</h3>
+      <div id="scheduleList" class="space-y-3"></div>
+      <button onclick="saveSchedule()" class="w-full mt-4 bg-primary text-white py-3 rounded-xl font-semibold text-sm active:opacity-80">Сохранить расписание</button>
+      <p id="scheduleStatus" class="text-center text-xs mt-2 text-green-500 min-h-4"></p>
     </div>
   </main>
 </div>
 
-<!-- BOTTOM NAV (for registered) -->
-<nav id="bottomNav" class="hidden fixed bottom-0 left-0 right-0 h-20 bg-white/90 dark:bg-black/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-around px-6 z-40" style="padding-bottom:max(16px,env(safe-area-inset-bottom))">
-  <button onclick="switchTab('dashboard')" class="nav-btn flex flex-col items-center gap-1 text-primary" data-tab="dashboard">
-    <span class="material-icons-outlined">dashboard</span>
+<!-- ── BOTTOM NAV ── -->
+<nav id="bottomNav" class="hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-black/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-around px-4 z-40" style="height:64px;padding-bottom:max(8px,env(safe-area-inset-bottom))">
+  <button onclick="switchTab('dashboard')" class="nav-btn flex flex-col items-center gap-0.5 text-primary" data-tab="dashboard">
+    <span class="material-icons-outlined text-[22px]">dashboard</span>
     <span class="text-[10px] font-medium">Главная</span>
   </button>
-  <button onclick="switchTab('services')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500" data-tab="services">
-    <span class="material-icons-outlined">medical_services</span>
+  <button onclick="switchTab('calendar')" class="nav-btn flex flex-col items-center gap-0.5 text-slate-400 dark:text-slate-500" data-tab="calendar">
+    <span class="material-icons-outlined text-[22px]">calendar_month</span>
+    <span class="text-[10px] font-medium">Календарь</span>
+  </button>
+  <button onclick="switchTab('services')" class="nav-btn flex flex-col items-center gap-0.5 text-slate-400 dark:text-slate-500" data-tab="services">
+    <span class="material-icons-outlined text-[22px]">medical_services</span>
     <span class="text-[10px] font-medium">Услуги</span>
   </button>
-  <button onclick="switchTab('settings')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500" data-tab="settings">
-    <span class="material-icons-outlined">settings</span>
+  <button onclick="switchTab('settings')" class="nav-btn flex flex-col items-center gap-0.5 text-slate-400 dark:text-slate-500" data-tab="settings">
+    <span class="material-icons-outlined text-[22px]">settings</span>
     <span class="text-[10px] font-medium">Настройки</span>
   </button>
 </nav>
 
 <script>
 (function(){
-  const tg = window.Telegram && window.Telegram.WebApp;
-  if(tg){ tg.expand(); tg.ready(); }
-  if(tg && tg.colorScheme === 'dark') document.documentElement.classList.add('dark');
+const tg = window.Telegram && window.Telegram.WebApp;
+if(tg){tg.expand();tg.ready();}
+if(tg && tg.colorScheme==='dark') document.documentElement.classList.add('dark');
+if(tg && tg.BackButton){
+  tg.BackButton.onClick(function(){
+    if(currentScreen==='sMyBookings') show('sWelcome');
+    else if(currentScreen==='sReg1') show('sWelcome');
+    else if(currentScreen==='sReg2') show('sReg1');
+  });
+}
 
-  const SUPABASE_URL = "https://uuiprnacqstiwfuxvyet.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs";
-  const BOT_USERNAME = "testaltegiobot";
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SB_URL="https://uuiprnacqstiwfuxvyet.supabase.co";
+const SB_KEY="sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs";
+const BOT="testaltegiobot";
+const sb=window.supabase.createClient(SB_URL,SB_KEY);
 
-  const tgUserId = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || null;
-  const username = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.username) || null;
-  const fn = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || '';
-  const ln = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.last_name) || '';
-  const fullName = [fn, ln].filter(Boolean).join(' ') || username || 'Агент';
+const tgId=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.id)||null;
+const uname=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.username)||null;
+const fn=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.first_name)||'';
+const ln=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.last_name)||'';
+const fullName=[fn,ln].filter(Boolean).join(' ')||uname||'Агент';
 
-  let agent = null;
-  const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-  const MONTHS_G = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const DAYS_SHORT=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const DAYS_FULL=['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
+const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTHS_G=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 
-  function showScreen(name){
-    var screens = ['welcome','myBookings','dashboard','services','settings'];
-    screens.forEach(function(s){
-      document.getElementById('screen' + s.charAt(0).toUpperCase() + s.slice(1)).classList.add('hidden');
-    });
-    document.getElementById('screen' + name.charAt(0).toUpperCase() + name.slice(1)).classList.remove('hidden');
+let agent=null;
+let allBookings=[];
+let regServices=[];
+let calYear=new Date().getFullYear();
+let calMonth=new Date().getMonth();
+let currentScreen='sWelcome';
+
+// Util: day index Mon=0..Sun=6 from JS Sun=0..Sat=6
+function jsDay(d){return (d.getDay()+6)%7;}
+
+function pad(n){return n<10?'0'+n:''+n;}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function localDate(dt){var d=new Date(dt);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function localTime(dt){var d=new Date(dt);return pad(d.getHours())+':'+pad(d.getMinutes());}
+function formatDate(ds){var p=ds.split('-');return parseInt(p[2])+' '+MONTHS_G[parseInt(p[1])-1]+' '+p[0];}
+
+window.show=function(id){
+  var all=['sWelcome','sReg1','sReg2','sMyBookings','sDashboard','sCalendar','sServices','sSettings'];
+  all.forEach(function(s){document.getElementById(s).classList.add('hidden');});
+  document.getElementById(id).classList.remove('hidden');
+  currentScreen=id;
+  // Show/hide Telegram BackButton
+  var hasBack=['sMyBookings','sReg1','sReg2'];
+  if(tg&&tg.BackButton){
+    if(hasBack.indexOf(id)!==-1) tg.BackButton.show();
+    else tg.BackButton.hide();
+  }
+};
+
+window.switchTab=function(tab){
+  var map={dashboard:'sDashboard',calendar:'sCalendar',services:'sServices',settings:'sSettings'};
+  show(map[tab]);
+  document.querySelectorAll('.nav-btn').forEach(function(btn){
+    btn.className='nav-btn flex flex-col items-center gap-0.5 '+(btn.dataset.tab===tab?'text-primary':'text-slate-400 dark:text-slate-500');
+  });
+  if(tab==='calendar') renderCalendar();
+  if(tab==='services') loadSvcList();
+  if(tab==='settings') renderSettings();
+};
+
+// ── REGISTRATION ──
+window.updateRegAvatar=function(){
+  var v=document.getElementById('regName').value.trim();
+  document.getElementById('regAvatar').textContent=v?v.charAt(0).toUpperCase():'?';
+};
+
+window.goReg2=function(){
+  var name=document.getElementById('regName').value.trim();
+  var spec=document.getElementById('regSpecialty').value.trim();
+  if(!name){document.getElementById('reg1Status').textContent='Введите ваше имя';return;}
+  if(!spec){document.getElementById('reg1Status').textContent='Введите специализацию';return;}
+  document.getElementById('reg1Status').textContent='';
+  show('sReg2');
+};
+
+window.addRegService=function(){
+  var title=document.getElementById('rs_title').value.trim();
+  var dur=parseInt(document.getElementById('rs_dur').value)||0;
+  var price=document.getElementById('rs_price').value.trim()||null;
+  if(!title||dur<=0){document.getElementById('reg2Status').textContent='Укажите название и длительность';return;}
+  regServices.push({title:title,duration_min:dur,price:price});
+  document.getElementById('rs_title').value='';
+  document.getElementById('rs_dur').value='';
+  document.getElementById('rs_price').value='';
+  document.getElementById('reg2Status').textContent='';
+  renderRegServices();
+};
+
+function renderRegServices(){
+  var list=document.getElementById('regServicesList');
+  list.innerHTML='';
+  regServices.forEach(function(s,i){
+    var div=document.createElement('div');
+    div.className='bg-card-light dark:bg-card-dark rounded-xl p-3 flex items-center justify-between border border-slate-100 dark:border-slate-800';
+    div.innerHTML='<div><p class="font-semibold text-sm">'+esc(s.title)+'</p><p class="text-xs text-slate-500 dark:text-slate-400">'+s.duration_min+' мин'+(s.price?' · '+s.price:'')+'</p></div>'
+      +'<button onclick="removeRegSvc('+i+')" class="text-red-400 p-1"><span class="material-icons-outlined text-sm">close</span></button>';
+    list.appendChild(div);
+  });
+}
+
+window.removeRegSvc=function(i){regServices.splice(i,1);renderRegServices();};
+
+window.finishReg=async function(){
+  if(regServices.length<2){document.getElementById('reg2Status').textContent='Добавьте минимум 2 услуги';return;}
+  document.getElementById('reg2Status').textContent='Создаём профиль…';
+  var name=document.getElementById('regName').value.trim();
+  var spec=document.getElementById('regSpecialty').value.trim();
+  var code=Math.random().toString(36).slice(2,10).toLowerCase();
+  var defaultSchedule={'1':{enabled:true,start:'09:00',end:'18:00'},'2':{enabled:true,start:'09:00',end:'18:00'},'3':{enabled:true,start:'09:00',end:'18:00'},'4':{enabled:true,start:'09:00',end:'18:00'},'5':{enabled:true,start:'09:00',end:'18:00'},'6':{enabled:false,start:'09:00',end:'18:00'},'0':{enabled:false,start:'09:00',end:'18:00'}};
+  var r=await sb.from('agents').insert({tg_user_id:tgId,username:uname,full_name:name,agent_code:code,specialty:spec,schedule:defaultSchedule}).select('*').single();
+  if(r.error){document.getElementById('reg2Status').textContent='Ошибка: '+r.error.message;return;}
+  agent=r.data;
+  var svcs=regServices.map(function(s){return Object.assign({},s,{agent_id:agent.id});});
+  await sb.from('services').insert(svcs);
+  regServices=[];
+  await loadAllBookings();
+  initAgentUI();
+  switchTab('dashboard');
+};
+
+// ── LOAD DATA ──
+async function loadAllBookings(){
+  if(!agent) return;
+  var r=await sb.from('bookings').select('id,customer_name,start_time,notified,services(title)').eq('agent_id',agent.id).order('start_time',{ascending:true});
+  allBookings=r.data||[];
+}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  var today=new Date();
+  var todayStr=localDate(today);
+  var todayBookings=allBookings.filter(function(b){return localDate(b.start_time)===todayStr;});
+  var upcoming=allBookings.filter(function(b){var d=new Date(b.start_time);return d>=today;});
+  var newCount=allBookings.filter(function(b){return !b.notified;}).length;
+
+  document.getElementById('statToday').textContent=todayBookings.length;
+  document.getElementById('statTotal').textContent=allBookings.length;
+  document.getElementById('statNew').textContent=newCount;
+
+  var main=document.getElementById('dashMain');
+  main.innerHTML='';
+
+  // Group upcoming by date
+  var groups={};
+  upcoming.forEach(function(b){
+    var ds=localDate(b.start_time);
+    if(!groups[ds]) groups[ds]=[];
+    groups[ds].push(b);
+  });
+
+  var dates=Object.keys(groups).sort();
+  if(!dates.length){
+    main.innerHTML='<div class="text-center py-16"><span class="material-icons-outlined text-5xl text-slate-300 dark:text-slate-600">event_available</span><p class="mt-3 text-slate-500 dark:text-slate-400 text-sm">Предстоящих записей нет</p></div>';
+    return;
   }
 
-  window.switchTab = function(tab){
-    showScreen(tab);
-    document.querySelectorAll('.nav-btn').forEach(function(btn){
-      var active = btn.dataset.tab === tab;
-      btn.className = 'nav-btn flex flex-col items-center gap-1 ' + (active ? 'text-primary' : 'text-slate-400 dark:text-slate-500');
-    });
-  };
+  dates.forEach(function(ds){
+    var label=ds===todayStr?'Сегодня, '+formatDate(ds):formatDate(ds);
+    var section=document.createElement('div');
+    section.className='mb-6';
+    section.innerHTML='<h2 class="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">'+label+'</h2>';
+    var timeline=document.createElement('div');
+    timeline.className='relative space-y-3';
+    var line=document.createElement('div');
+    line.className='absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-800';
+    timeline.appendChild(line);
 
-  window.showMyBookings = async function(){
-    showScreen('myBookings');
-    if(!tgUserId){ document.getElementById('noMyBookings').classList.remove('hidden'); return; }
-    var r = await sb.from('bookings').select('id,customer_name,start_time,services(title),agents(full_name,username)').eq('customer_tg_id', tgUserId).order('start_time', {ascending: true}).limit(50);
-    var list = document.getElementById('myBookingsList');
-    list.innerHTML = '';
-    if(r.error || !r.data || !r.data.length){
-      document.getElementById('noMyBookings').classList.remove('hidden');
-      return;
-    }
-    r.data.forEach(function(b){
-      var dt = new Date(b.start_time);
-      var agentName = (b.agents && (b.agents.full_name || b.agents.username)) || 'Агент';
-      var div = document.createElement('div');
-      div.className = 'bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800';
-      div.innerHTML = '<div class="flex justify-between items-start"><div><h3 class="font-bold">' + esc(agentName) + '</h3><p class="text-sm text-slate-500 dark:text-slate-400">' + esc((b.services && b.services.title) || 'Услуга') + '</p></div><span class="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap ml-2">' + dt.getDate() + ' ' + MONTHS_G[dt.getMonth()] + '<br>' + pad(dt.getHours()) + ':' + pad(dt.getMinutes()) + '</span></div>';
-      list.appendChild(div);
-    });
-  };
-
-  window.registerAgent = async function(){
-    document.getElementById('welcomeStatus').textContent = 'Создаём профиль…';
-    var code = Math.random().toString(36).slice(2, 10).toLowerCase();
-    var r = await sb.from('agents').insert({
-      tg_user_id: tgUserId,
-      username: username,
-      full_name: fullName,
-      agent_code: code
-    }).select('*').single();
-    if(r.error){
-      document.getElementById('welcomeStatus').textContent = 'Ошибка: ' + r.error.message;
-      return;
-    }
-    agent = r.data;
-    initDashboard();
-  };
-
-  function initDashboard(){
-    var initial = (fullName || 'A').charAt(0).toUpperCase();
-    document.getElementById('agentAvatar').textContent = initial;
-    document.getElementById('settingsAvatar').textContent = initial;
-    document.getElementById('settingsName').textContent = fullName;
-    document.getElementById('settingsUsername').textContent = username ? '@' + username : '';
-    var link = 'https://t.me/' + BOT_USERNAME + '?startapp=' + agent.agent_code;
-    document.getElementById('settingsLink').textContent = link;
-    document.getElementById('bottomNav').classList.remove('hidden');
-    switchTab('dashboard');
-    loadDashboard();
-    loadServicesList();
-  }
-
-  async function loadDashboard(){
-    var today = new Date();
-    var todayStr = today.toISOString().split('T')[0];
-    document.getElementById('todayLabel').textContent = 'Сегодня, ' + today.getDate() + ' ' + MONTHS[today.getMonth()];
-
-    var r = await sb.from('bookings').select('id,customer_name,start_time,notified,services(title)').eq('agent_id', agent.id).order('start_time', {ascending: true});
-    if(r.error || !r.data) return;
-    var all = r.data;
-    var todayBookings = all.filter(function(b){ return b.start_time && b.start_time.startsWith(todayStr); });
-    var newCount = all.filter(function(b){ return !b.notified; }).length;
-
-    document.getElementById('statToday').textContent = todayBookings.length;
-    document.getElementById('statTotal').textContent = all.length;
-    document.getElementById('statNew').textContent = newCount;
-
-    var timeline = document.getElementById('bookingTimeline');
-    timeline.innerHTML = '<div class="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-800"></div>';
-
-    if(!todayBookings.length){
-      document.getElementById('noTodayBookings').classList.remove('hidden');
-      return;
-    }
-    document.getElementById('noTodayBookings').classList.add('hidden');
-
-    todayBookings.forEach(function(b){
-      var dt = new Date(b.start_time);
-      var timeStr = pad(dt.getHours()) + ':' + pad(dt.getMinutes());
-      var isNew = !b.notified;
-      var item = document.createElement('div');
-      item.className = 'relative pl-10';
-      item.innerHTML = '<div class="absolute left-3 top-1.5 w-2.5 h-2.5 rounded-full border-2 border-bg-light dark:border-bg-dark ' + (isNew ? 'bg-primary' : 'bg-slate-400 dark:bg-slate-600') + '"></div>' +
-        '<div class="text-xs font-semibold ' + (isNew ? 'text-primary' : 'text-slate-500 dark:text-slate-400') + ' mb-2">' + timeStr + (isNew ? ' · Новая' : '') + '</div>' +
-        '<div class="bg-card-light dark:bg-card-dark rounded-2xl p-4 border ' + (isNew ? 'border-l-4 border-primary' : 'border-slate-100 dark:border-slate-800') + '">' +
-        '<div class="flex justify-between items-start mb-3"><div><h3 class="font-bold text-base">' + esc(b.customer_name) + '</h3><p class="text-sm text-slate-500 dark:text-slate-400">' + esc((b.services && b.services.title) || 'Услуга') + '</p></div>' +
-        '<span class="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide ' + (isNew ? 'bg-primary/10 text-primary' : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400') + '">' + (isNew ? 'Новая' : 'Подтверждена') + '</span></div></div>';
+    groups[ds].forEach(function(b){
+      var isNew=!b.notified;
+      var item=document.createElement('div');
+      item.className='relative pl-10';
+      item.innerHTML='<div class="absolute left-3 top-1.5 w-2.5 h-2.5 rounded-full border-2 border-bg-light dark:border-bg-dark '+(isNew?'bg-primary':'bg-slate-400 dark:bg-slate-600')+'"></div>'
+        +'<div class="text-xs font-semibold mb-1.5 '+(isNew?'text-primary':'text-slate-500 dark:text-slate-400')+'">'+localTime(b.start_time)+(isNew?' · Новая':'')+'</div>'
+        +'<div class="bg-card-light dark:bg-card-dark rounded-2xl p-4 '+(isNew?'border-l-4 border-primary':'border border-slate-100 dark:border-slate-800')+'">'
+        +'<div class="flex justify-between items-center">'
+        +'<div><h3 class="font-bold">'+esc(b.customer_name)+'</h3><p class="text-sm text-slate-500 dark:text-slate-400">'+esc((b.services&&b.services.title)||'Услуга')+'</p></div>'
+        +'<span class="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide '+(isNew?'bg-primary/10 text-primary':'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400')+'">'+(isNew?'Новая':'Подтверждена')+'</span>'
+        +'</div></div>';
       timeline.appendChild(item);
     });
-  }
+    section.appendChild(timeline);
+    main.appendChild(section);
+  });
+}
 
-  async function loadServicesList(){
-    var r = await sb.from('services').select('*').eq('agent_id', agent.id).order('created_at', {ascending: false});
-    var list = document.getElementById('servicesList2');
-    list.innerHTML = '';
-    if(r.error || !r.data || !r.data.length){
-      document.getElementById('noServicesList').classList.remove('hidden');
-      return;
+// ── CALENDAR ──
+window.calPrev=function(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();};
+window.calNext=function(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();};
+
+function renderCalendar(){
+  document.getElementById('calMonthLabel').textContent=MONTHS[calMonth]+' '+calYear;
+  var grid=document.getElementById('calGrid');
+  grid.innerHTML='';
+
+  // Days with bookings
+  var daysWithBookings={};
+  allBookings.forEach(function(b){
+    var d=new Date(b.start_time);
+    if(d.getFullYear()===calYear&&d.getMonth()===calMonth){
+      var key=pad(calYear)+'-'+pad(calMonth+1)+'-'+pad(d.getDate());
+      daysWithBookings[key]=(daysWithBookings[key]||0)+1;
     }
-    document.getElementById('noServicesList').classList.add('hidden');
-    r.data.forEach(function(s){
-      var div = document.createElement('div');
-      div.className = 'bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800 flex items-center justify-between';
-      div.innerHTML = '<div><h3 class="font-semibold">' + esc(s.title) + '</h3><div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1">' +
-        (s.duration_min ? '<span>' + s.duration_min + ' мин</span>' : '') +
-        (s.price ? '<span>' + s.price + '</span>' : '') + '</div></div>';
-      list.appendChild(div);
-    });
+  });
+
+  var firstDay=new Date(calYear,calMonth,1);
+  var totalDays=new Date(calYear,calMonth+1,0).getDate();
+  var startOffset=jsDay(firstDay); // Mon=0
+
+  var today=new Date();
+  var todayStr=localDate(today);
+
+  // Empty cells before first day
+  for(var i=0;i<startOffset;i++){
+    var empty=document.createElement('div');
+    empty.className='cal-day';
+    grid.appendChild(empty);
   }
 
-  window.addService = async function(){
-    var title = document.getElementById('svcTitle').value.trim();
-    var duration = parseInt(document.getElementById('svcDuration').value) || 0;
-    var price = document.getElementById('svcPrice').value.trim() || null;
-    var status = document.getElementById('svcStatus');
-    if(!title || duration <= 0){ status.textContent = 'Заполните название и длительность'; return; }
-    status.textContent = 'Сохраняем…';
-    var payload = { agent_id: agent.id, title: title, duration_min: duration };
-    if(price) payload.price = price;
-    var r = await sb.from('services').insert(payload);
-    if(r.error){ status.textContent = 'Ошибка: ' + r.error.message; return; }
-    document.getElementById('svcTitle').value = '';
-    document.getElementById('svcDuration').value = '';
-    document.getElementById('svcPrice').value = '';
-    status.textContent = '✓ Услуга добавлена';
-    loadServicesList();
-    setTimeout(function(){ status.textContent = ''; }, 3000);
-  };
-
-  window.copyLink = async function(){
-    var link = 'https://t.me/' + BOT_USERNAME + '?startapp=' + (agent && agent.agent_code);
-    try {
-      await navigator.clipboard.writeText(link);
-      document.getElementById('linkStatus').textContent = '✓ Скопировано';
-    } catch(e) {
-      document.getElementById('linkStatus').textContent = 'Скопируйте вручную';
-    }
-    setTimeout(function(){ document.getElementById('linkStatus').textContent = ''; }, 3000);
-  };
-
-  window.openLink = function(){
-    var link = 'https://t.me/' + BOT_USERNAME + '?startapp=' + (agent && agent.agent_code);
-    window.open(link, '_blank');
-  };
-
-  function pad(n){ return n < 10 ? '0' + n : '' + n; }
-  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  async function init(){
-    if(!tgUserId){ showScreen('welcome'); return; }
-    var r = await sb.from('agents').select('*').eq('tg_user_id', tgUserId).maybeSingle();
-    if(r.error){ showScreen('welcome'); return; }
-    if(!r.data){ showScreen('welcome'); return; }
-    agent = r.data;
-    initDashboard();
+  for(var d=1;d<=totalDays;d++){
+    (function(day){
+      var ds=calYear+'-'+pad(calMonth+1)+'-'+pad(day);
+      var isToday=ds===todayStr;
+      var cnt=daysWithBookings[ds]||0;
+      var btn=document.createElement('button');
+      btn.className='cal-day flex flex-col items-center justify-center rounded-xl relative active:scale-90 transition-transform '+(isToday?'bg-primary text-white':'hover:bg-slate-100 dark:hover:bg-slate-800');
+      btn.innerHTML='<span class="text-sm font-semibold">'+day+'</span>'+(cnt?'<span class="w-1.5 h-1.5 rounded-full mt-0.5 '+(isToday?'bg-white':'bg-primary')+'"></span>':'<span class="w-1.5 h-1.5 mt-0.5"></span>');
+      btn.onclick=function(){showDayBookings(ds);};
+      grid.appendChild(btn);
+    })(d);
   }
 
-  init();
+  document.getElementById('calDayBookings').innerHTML='<p class="text-sm text-slate-400 dark:text-slate-500 text-center py-4">Выберите дату</p>';
+}
+
+function showDayBookings(ds){
+  var bookings=allBookings.filter(function(b){return localDate(b.start_time)===ds;});
+  var el=document.getElementById('calDayBookings');
+  el.innerHTML='<h3 class="font-semibold mb-3">'+formatDate(ds)+'</h3>';
+  if(!bookings.length){
+    el.innerHTML+='<p class="text-sm text-slate-400 dark:text-slate-500 text-center py-4">Записей нет</p>';
+    return;
+  }
+  bookings.forEach(function(b){
+    var isNew=!b.notified;
+    var div=document.createElement('div');
+    div.className='bg-card-light dark:bg-card-dark rounded-2xl p-4 border '+(isNew?'border-l-4 border-primary':'border-slate-100 dark:border-slate-800')+' mb-3 flex items-center justify-between';
+    div.innerHTML='<div><p class="font-semibold">'+esc(b.customer_name)+'</p><p class="text-xs text-slate-500 dark:text-slate-400">'+esc((b.services&&b.services.title)||'Услуга')+' · '+localTime(b.start_time)+'</p></div>'
+      +'<span class="text-[10px] font-bold px-2 py-1 rounded uppercase '+(isNew?'bg-primary/10 text-primary':'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400')+'">'+(isNew?'Новая':'OK')+'</span>';
+    el.appendChild(div);
+  });
+}
+
+// ── SERVICES ──
+async function loadSvcList(){
+  var r=await sb.from('services').select('*').eq('agent_id',agent.id).order('created_at',{ascending:false});
+  var list=document.getElementById('svcList');
+  list.innerHTML='';
+  if(!r.data||!r.data.length){document.getElementById('noSvcList').classList.remove('hidden');return;}
+  document.getElementById('noSvcList').classList.add('hidden');
+  r.data.forEach(function(s){
+    var div=document.createElement('div');
+    div.className='bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800 flex items-center justify-between';
+    div.innerHTML='<div><p class="font-semibold">'+esc(s.title)+'</p><div class="flex gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1">'+(s.duration_min?'<span>'+s.duration_min+' мин</span>':'')+(s.price?'<span>'+esc(s.price)+'</span>':'')+'</div></div>'
+      +'<button onclick="deleteSvc('+s.id+')" class="text-red-400 p-1 active:scale-90"><span class="material-icons-outlined text-sm">delete</span></button>';
+    list.appendChild(div);
+  });
+}
+
+window.addService=async function(){
+  var title=document.getElementById('svcTitle').value.trim();
+  var dur=parseInt(document.getElementById('svcDur').value)||0;
+  var price=document.getElementById('svcPrice').value.trim()||null;
+  var st=document.getElementById('svcStatus');
+  if(!title||dur<=0){st.textContent='Заполните название и длительность';return;}
+  st.textContent='Сохраняем…';
+  var payload={agent_id:agent.id,title:title,duration_min:dur};
+  if(price) payload.price=price;
+  var r=await sb.from('services').insert(payload);
+  if(r.error){st.textContent='Ошибка: '+r.error.message;return;}
+  document.getElementById('svcTitle').value='';
+  document.getElementById('svcDur').value='';
+  document.getElementById('svcPrice').value='';
+  st.textContent='✓ Добавлено';
+  loadSvcList();
+  setTimeout(function(){st.textContent='';},3000);
+};
+
+window.deleteSvc=async function(id){
+  if(!confirm('Удалить услугу?')) return;
+  await sb.from('services').delete().eq('id',id);
+  loadSvcList();
+};
+
+// ── SETTINGS ──
+function renderSettings(){
+  document.getElementById('settingsAvatar').textContent=(agent.full_name||'A').charAt(0).toUpperCase();
+  document.getElementById('settingsName').textContent=agent.full_name||'';
+  document.getElementById('settingsSpecialty').textContent=agent.specialty||'';
+  document.getElementById('settingsUsername').textContent=uname?'@'+uname:'';
+  document.getElementById('settingsLink').textContent='https://t.me/'+BOT+'?startapp='+agent.agent_code;
+  renderSchedule();
+}
+
+function renderSchedule(){
+  var schedule=agent.schedule||{'1':{enabled:true,start:'09:00',end:'18:00'},'2':{enabled:true,start:'09:00',end:'18:00'},'3':{enabled:true,start:'09:00',end:'18:00'},'4':{enabled:true,start:'09:00',end:'18:00'},'5':{enabled:true,start:'09:00',end:'18:00'},'6':{enabled:false,start:'09:00',end:'18:00'},'0':{enabled:false,start:'09:00',end:'18:00'}};
+  var list=document.getElementById('scheduleList');
+  list.innerHTML='';
+  // Mon=1..Sun=0, display Mon-Sun
+  var order=[1,2,3,4,5,6,0];
+  order.forEach(function(di){
+    var s=schedule[di]||{enabled:false,start:'09:00',end:'18:00'};
+    var row=document.createElement('div');
+    row.className='flex items-center gap-3';
+    row.innerHTML='<label class="relative inline-flex items-center cursor-pointer flex-shrink-0">'
+      +'<input type="checkbox" class="sr-only peer sch-toggle" data-day="'+di+'" '+(s.enabled?'checked':'')+'>'
+      +'<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\'\'] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>'
+      +'</label>'
+      +'<span class="text-sm font-medium w-16 flex-shrink-0">'+DAYS_FULL[di===0?6:di-1]+'</span>'
+      +'<input type="time" class="sch-start flex-1 bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary" data-day="'+di+'" value="'+s.start+'">'
+      +'<span class="text-slate-400 text-xs">—</span>'
+      +'<input type="time" class="sch-end flex-1 bg-bg-light dark:bg-bg-dark border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary" data-day="'+di+'" value="'+s.end+'">';
+    list.appendChild(row);
+  });
+}
+
+window.saveSchedule=async function(){
+  var schedule={};
+  document.querySelectorAll('.sch-toggle').forEach(function(cb){
+    var d=cb.dataset.day;
+    schedule[d]={enabled:cb.checked,start:'09:00',end:'18:00'};
+  });
+  document.querySelectorAll('.sch-start').forEach(function(inp){schedule[inp.dataset.day].start=inp.value;});
+  document.querySelectorAll('.sch-end').forEach(function(inp){schedule[inp.dataset.day].end=inp.value;});
+  var r=await sb.from('agents').update({schedule:schedule}).eq('id',agent.id);
+  if(r.error){document.getElementById('scheduleStatus').textContent='Ошибка: '+r.error.message;return;}
+  agent.schedule=schedule;
+  document.getElementById('scheduleStatus').textContent='✓ Сохранено';
+  setTimeout(function(){document.getElementById('scheduleStatus').textContent='';},3000);
+};
+
+window.copyLink=async function(){
+  var link='https://t.me/'+BOT+'?startapp='+agent.agent_code;
+  try{await navigator.clipboard.writeText(link);document.getElementById('linkStatus').textContent='✓ Скопировано';}
+  catch(e){document.getElementById('linkStatus').textContent='Скопируйте вручную';}
+  setTimeout(function(){document.getElementById('linkStatus').textContent='';},3000);
+};
+window.openLink=function(){window.open('https://t.me/'+BOT+'?startapp='+agent.agent_code,'_blank');};
+
+// ── MY BOOKINGS (client) ──
+window.showMyBookings=async function(){
+  show('sMyBookings');
+  if(!tgId){document.getElementById('noMyBookings').classList.remove('hidden');return;}
+  var r=await sb.from('bookings').select('id,customer_name,start_time,services(title),agents(full_name,username,specialty)').eq('customer_tg_id',tgId).order('start_time',{ascending:true});
+  var list=document.getElementById('myBookingsList');
+  list.innerHTML='';
+  if(!r.data||!r.data.length){document.getElementById('noMyBookings').classList.remove('hidden');return;}
+  r.data.forEach(function(b){
+    var dt=new Date(b.start_time);
+    var past=dt<new Date();
+    var agentName=(b.agents&&(b.agents.full_name||b.agents.username))||'Агент';
+    var spec=(b.agents&&b.agents.specialty)||'';
+    var div=document.createElement('div');
+    div.className='bg-card-light dark:bg-card-dark rounded-2xl p-4 border border-slate-100 dark:border-slate-800 '+(past?'opacity-60':'');
+    div.innerHTML='<div class="flex justify-between items-start">'
+      +'<div><h3 class="font-bold">'+esc(agentName)+'</h3>'+(spec?'<p class="text-xs text-slate-500 dark:text-slate-400">'+esc(spec)+'</p>':'')
+      +'<p class="text-sm text-primary mt-1">'+esc((b.services&&b.services.title)||'Услуга')+'</p></div>'
+      +'<div class="text-right text-xs text-slate-500 dark:text-slate-400 flex-shrink-0 ml-2">'
+      +'<p class="font-semibold">'+dt.getDate()+' '+MONTHS_G[dt.getMonth()]+'</p>'
+      +'<p>'+pad(dt.getHours())+':'+pad(dt.getMinutes())+'</p>'
+      +'<span class="mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] font-bold '+(past?'bg-slate-100 dark:bg-slate-800 text-slate-500':'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400')+'">'+(past?'Прошло':'Предстоит')+'</span>'
+      +'</div></div>';
+    list.appendChild(div);
+  });
+};
+
+// ── INIT ──
+function initAgentUI(){
+  var initial=(agent.full_name||'A').charAt(0).toUpperCase();
+  document.getElementById('dashAvatar').textContent=initial;
+  document.getElementById('dashSpecialty').textContent=agent.specialty||'';
+  document.getElementById('bottomNav').classList.remove('hidden');
+}
+
+async function init(){
+  if(!tgId){show('sWelcome');return;}
+  var r=await sb.from('agents').select('*').eq('tg_user_id',tgId).maybeSingle();
+  if(r.error||!r.data){show('sWelcome');return;}
+  agent=r.data;
+  await loadAllBookings();
+  initAgentUI();
+  renderDashboard();
+  switchTab('dashboard');
+}
+
+init();
 })();
 </script>
 </body>
