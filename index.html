@@ -1,23 +1,138 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <title>Booking</title>
+
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 </head>
 
-<body style="font-family:sans-serif;text-align:center;padding:40px;">
+<body style="font-family:sans-serif;padding:20px">
 
-<h2>Система записи</h2>
+<h2 id="agentName">Загрузка...</h2>
 
-<p>Mini App работает</p>
+<div id="services"></div>
 
-<button onclick="alert('Запись скоро будет')">
-Проверить
+<div id="bookingForm" style="display:none;margin-top:20px">
+
+<input id="customerName" placeholder="Ваше имя"
+style="width:100%;padding:10px;margin-bottom:10px"/>
+
+<input id="bookingTime" type="datetime-local"
+style="width:100%;padding:10px;margin-bottom:10px"/>
+
+<button onclick="bookService()" style="padding:12px;width:100%">
+Записаться
 </button>
 
+<p id="status"></p>
+
+</div>
+
 <script>
-const tg = window.Telegram.WebApp;
-tg.expand();
+
+const tg = window.Telegram.WebApp
+tg.expand()
+
+const agentCode = tg.initDataUnsafe.start_param
+
+const supabase = window.supabase.createClient(
+"https://uuiprnacqstiwfuxvyet.supabase.co",
+"sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs"
+)
+
+let agentId = null
+let selectedService = null
+
+async function loadData(){
+
+// агент
+const { data:agent } = await supabase
+.from("agents")
+.select("*")
+.eq("agent_code", agentCode)
+.single()
+
+agentId = agent.id
+
+document.getElementById("agentName").innerText =
+"Запись к " + (agent.full_name || agent.username)
+
+// услуги
+const { data:services } = await supabase
+.from("services")
+.select("*")
+.eq("agent_id", agent.id)
+
+const container = document.getElementById("services")
+
+services.forEach(s => {
+
+const btn = document.createElement("button")
+
+btn.style = "display:block;width:100%;padding:12px;margin:10px 0"
+
+btn.innerText =
+s.title + " • " + s.duration_min + " мин"
+
+btn.onclick = () => {
+
+selectedService = s
+document.getElementById("bookingForm").style.display="block"
+
+}
+
+container.appendChild(btn)
+
+})
+
+}
+
+async function bookService(){
+
+const name =
+document.getElementById("customerName").value
+
+const time =
+document.getElementById("bookingTime").value
+
+if(!name || !time){
+
+alert("Заполните данные")
+
+return
+
+}
+
+const { error } = await supabase
+.from("bookings")
+.insert({
+
+agent_id: agentId,
+service_id: selectedService.id,
+customer_name: name,
+start_time: time
+
+})
+
+if(error){
+
+document.getElementById("status").innerText =
+"Ошибка записи"
+
+return
+
+}
+
+document.getElementById("status").innerText =
+"Вы записаны ✅"
+
+}
+
+loadData()
+
 </script>
 
 </body>
