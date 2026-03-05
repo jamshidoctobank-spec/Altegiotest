@@ -1,462 +1,220 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Booking</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    body { font-family: sans-serif; padding: 16px; background:#fff; }
-    .card { border:1px solid #eee; border-radius:12px; padding:14px; margin:12px 0; }
-    h2,h3 { margin: 0 0 10px 0; }
-    input, select { width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:10px; }
-    button { width:100%; padding:12px; border:0; border-radius:12px; cursor:pointer; font-weight:600; }
+    body { font-family: sans-serif; padding: 16px; margin: 0; }
+    h2 { margin: 0 0 12px 0; }
+    .muted { color:#666; font-size: 14px; margin-top: 6px; }
+    .card { border:1px solid #eee; border-radius:12px; padding:12px; margin:12px 0; }
+    button { cursor:pointer; border:0; border-radius:12px; padding:12px; width:100%; font-size:16px; }
     .btn { background:#111; color:#fff; }
     .btn2 { background:#f2f2f2; color:#111; }
-    .muted { color:#777; font-size: 13px; }
+    input { width:100%; padding:12px; border:1px solid #ddd; border-radius:12px; font-size:16px; box-sizing: border-box; }
     .row { display:flex; gap:10px; }
     .row > * { flex:1; }
-    .listItem { padding:10px; border:1px solid #eee; border-radius:12px; margin:8px 0; }
-    .pill { display:inline-block; background:#f3f3f3; padding:4px 8px; border-radius:999px; font-size:12px; }
-    .ok { color: #0a7; }
-    .err { color: #c33; }
-    .hidden { display:none; }
-    .linkBox { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; padding:10px; background:#f7f7f7; border-radius:10px; word-break: break-all; }
+    .error { color:#b00020; }
+    .ok { color:#0a7a2f; }
   </style>
 </head>
 
 <body>
-  <h2 id="title">Загрузка…</h2>
-  <div id="subtitle" class="muted"></div>
 
-  <!-- ADMIN PANEL (agent) -->
-  <div id="adminPanel" class="hidden">
-    <div class="card">
-      <h3>Твоя ссылка для записи</h3>
-      <div id="agentLink" class="linkBox">...</div>
-      <div class="row" style="margin-top:10px">
-        <button class="btn2" id="copyLinkBtn">Скопировать</button>
-        <button class="btn" id="openLinkBtn">Открыть</button>
-      </div>
-      <div class="muted" style="margin-top:10px">
-        Отправь эту ссылку клиенту — он увидит услуги и сможет записаться.
-      </div>
-    </div>
+  <h2 id="agentName">Загрузка...</h2>
+  <div id="hint" class="muted"></div>
 
-    <div class="card">
-      <h3>Добавить услугу</h3>
-      <input id="serviceTitle" placeholder="Название услуги (например: Консультация)" />
-      <div class="row">
-        <input id="serviceDuration" type="number" min="5" step="5" placeholder="Длительность (мин)" />
-        <input id="servicePrice" type="number" min="0" step="1000" placeholder="Цена (опционально)" />
-      </div>
-      <button class="btn" id="addServiceBtn">Добавить услугу</button>
-      <div id="addServiceStatus" class="muted"></div>
-    </div>
-
-    <div class="card">
-      <h3>Твои услуги</h3>
-      <div id="adminServices"></div>
-      <div class="muted">Ниже появятся услуги, которые видят клиенты.</div>
-    </div>
-
-    <div class="card">
-      <h3>Записи клиентов</h3>
-      <div id="adminBookings"></div>
-      <div class="muted">Показываем последние записи.</div>
-    </div>
+  <div id="services" class="card" style="display:none">
+    <div class="muted" style="margin-bottom:10px">Выберите услугу:</div>
+    <div id="servicesList"></div>
+    <div id="noServices" class="muted" style="display:none">У агента пока нет услуг.</div>
   </div>
 
-  <!-- CLIENT BOOKING (by agent_code) -->
-  <div id="clientBooking" class="hidden">
-    <div class="card">
-      <h3>Выберите услугу</h3>
-      <div id="services"></div>
-      <div class="muted">Нажмите на услугу — откроется форма записи.</div>
-    </div>
+  <div id="bookingForm" class="card" style="display:none">
+    <div id="selectedServiceTitle" style="font-weight:600; margin-bottom:10px"></div>
 
-    <div class="card hidden" id="bookingFormCard">
-      <h3 id="selectedServiceTitle">Запись</h3>
-      <input id="customerName" placeholder="Ваше имя" />
-      <input id="bookingTime" type="datetime-local" />
-      <button class="btn" id="bookBtn">Записаться</button>
-      <p id="status" class="muted"></p>
-    </div>
+    <input id="customerName" placeholder="Ваше имя" />
+
+    <div style="height:10px"></div>
+
+    <input id="bookingTime" type="datetime-local" />
+
+    <div style="height:12px"></div>
+
+    <button class="btn" onclick="bookService()">Записаться</button>
+
+    <div id="status" class="muted" style="margin-top:10px"></div>
+
+    <div style="height:10px"></div>
+
+    <button class="btn2" onclick="resetSelection()">Выбрать другую услугу</button>
   </div>
 
 <script>
-  // ====== CONFIG ======
-  const SUPABASE_URL = "https://uuiprnacqstiwfuxvyet.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs"; // publishable key
-  const BOT_USERNAME = "testaltegiobot"; // <-- если бот другой, поменяй
+  // Telegram
+  const tg = window.Telegram.WebApp;
+  tg.expand();
 
-  // ====== TELEGRAM INIT ======
-  const tg = window.Telegram?.WebApp;
-  if (tg) tg.expand();
+  // IMPORTANT: agentCode приходит только если открыли ссылкой
+  // https://t.me/<bot>?startapp=<agentCode>
+  const agentCode = tg?.initDataUnsafe?.start_param || null;
 
-  // ====== SUPABASE CLIENT (IMPORTANT: NOT named "supabase") ======
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  // customer tg id — чтобы потом n8n мог написать клиенту
+  const customerTgId = tg?.initDataUnsafe?.user?.id || null;
 
-  // ====== GLOBAL STATE ======
-  let mode = "loading"; // "admin" | "client"
-  let me = null;        // agent row
+  // Supabase
+  const supabaseUrl = "https://uuiprnacqstiwfuxvyet.supabase.co";
+  const supabaseKey = "sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs";
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
   let agentId = null;
-  let agentCode = null;
   let selectedService = null;
 
-  function setTitle(text, sub="") {
-    document.getElementById("title").innerText = text;
-    document.getElementById("subtitle").innerText = sub;
+  function setStatus(text, type="muted") {
+    const el = document.getElementById("status");
+    el.className = type === "ok" ? "ok" : type === "error" ? "error" : "muted";
+    el.innerText = text || "";
   }
 
-  function show(elId) { document.getElementById(elId).classList.remove("hidden"); }
-  function hide(elId) { document.getElementById(elId).classList.add("hidden"); }
+  function show(elId, yes=true) {
+    document.getElementById(elId).style.display = yes ? "block" : "none";
+  }
 
-  function fmtDT(iso) {
+  function resetSelection() {
+    selectedService = null;
+    show("bookingForm", false);
+    setStatus("");
+  }
+
+  async function loadData() {
     try {
-      const d = new Date(iso);
-      return d.toLocaleString();
-    } catch(e) { return iso; }
-  }
-
-  // ====== ROUTER ======
-  // Если есть start_param => клиентская страница записи
-  // Если start_param нет => админ панель агента (по tg_user_id)
-  async function start() {
-    try {
-      const startParam = tg?.initDataUnsafe?.start_param || null;
-
-      if (startParam && String(startParam).trim().length > 0) {
-        mode = "client";
-        agentCode = String(startParam).trim();
-        await loadClientByAgentCode(agentCode);
-      } else {
-        mode = "admin";
-        const tgUserId = tg?.initDataUnsafe?.user?.id;
-        if (!tgUserId) {
-          setTitle("Открой через Telegram", "Не вижу Telegram user id");
-          return;
-        }
-        await loadAdminByTgUserId(tgUserId);
-      }
-    } catch (e) {
-      console.error(e);
-      setTitle("Ошибка", String(e?.message || e));
-    }
-  }
-
-  // ====== ADMIN MODE ======
-  async function loadAdminByTgUserId(tgUserId) {
-    setTitle("Админ панель", "Загружаю профиль агента…");
-
-    // 1) Найти агента
-    let { data: agent, error } = await sb
-      .from("agents")
-      .select("*")
-      .eq("tg_user_id", tgUserId)
-      .maybeSingle();
-
-    if (error) {
-      console.error(error);
-      setTitle("Ошибка Supabase", "Не смог прочитать agents");
-      return;
-    }
-
-    // 2) Если нет агента — создать
-    if (!agent) {
-      const username = tg?.initDataUnsafe?.user?.username || null;
-      const fullName = [tg?.initDataUnsafe?.user?.first_name, tg?.initDataUnsafe?.user?.last_name].filter(Boolean).join(" ") || null;
-
-      // простой код
-      const newCode = (Math.random().toString(36).slice(2, 10)).toLowerCase();
-
-      const ins = await sb.from("agents").insert({
-        tg_user_id: tgUserId,
-        username: username,
-        full_name: fullName,
-        agent_code: newCode
-      }).select("*").single();
-
-      if (ins.error) {
-        console.error(ins.error);
-        setTitle("Ошибка", "Не смог создать агента");
+      // 1) Проверяем agentCode
+      if (!agentCode) {
+        document.getElementById("agentName").innerText = "Агент не указан";
+        document.getElementById("hint").innerText =
+          "Откройте через уникальную ссылку агента (startapp).";
+        show("services", false);
+        show("bookingForm", false);
         return;
       }
-      agent = ins.data;
-    }
 
-    me = agent;
-    agentId = agent.id;
-    agentCode = agent.agent_code;
+      // 2) Загружаем агента
+      const { data: agent, error: agentErr } = await supabase
+        .from("agents")
+        .select("*")
+        .eq("agent_code", agentCode)
+        .single();
 
-    setTitle("Привет, агент 👋", me.full_name || me.username || "без имени");
-    document.getElementById("subtitle").innerText = "Тут ты добавляешь услуги и смотришь записи.";
-
-    hide("clientBooking");
-    show("adminPanel");
-
-    // ссылка
-    const link = `https://t.me/${BOT_USERNAME}?startapp=${agentCode}`;
-    document.getElementById("agentLink").innerText = link;
-
-    document.getElementById("copyLinkBtn").onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(link);
-        document.getElementById("subtitle").innerHTML = `<span class="ok">Ссылка скопирована ✅</span>`;
-      } catch (e) {
-        alert("Не удалось скопировать. Скопируй вручную.");
+      if (agentErr || !agent) {
+        document.getElementById("agentName").innerText = "Агент не найден";
+        document.getElementById("hint").innerText =
+          "Проверьте правильность ссылки агента.";
+        show("services", false);
+        show("bookingForm", false);
+        return;
       }
-    };
 
-    document.getElementById("openLinkBtn").onclick = () => window.open(link, "_blank");
+      agentId = agent.id;
+      document.getElementById("agentName").innerText =
+        "Запись к " + (agent.full_name || agent.username || "агенту");
+      document.getElementById("hint").innerText =
+        "Выберите услугу и время — мы подтвердим запись.";
 
-    // кнопка добавления услуги
-    document.getElementById("addServiceBtn").onclick = addService;
+      // 3) Загружаем услуги агента
+      const { data: services, error: servicesErr } = await supabase
+        .from("services")
+        .select("*")
+        .eq("agent_id", agentId)
+        .order("title", { ascending: true });
 
-    await refreshAdminLists();
-  }
+      show("services", true);
 
-  async function refreshAdminLists() {
-    await loadAdminServices();
-    await loadAdminBookings();
-  }
+      const list = document.getElementById("servicesList");
+      list.innerHTML = "";
 
-  async function loadAdminServices() {
-    const box = document.getElementById("adminServices");
-    box.innerHTML = "Загрузка…";
+      if (servicesErr) {
+        document.getElementById("noServices").style.display = "block";
+        document.getElementById("noServices").innerText = "Ошибка загрузки услуг.";
+        return;
+      }
 
-    const { data, error } = await sb
-      .from("services")
-      .select("*")
-      .eq("agent_id", agentId)
-      .order("created_at", { ascending: false });
+      if (!services || services.length === 0) {
+        document.getElementById("noServices").style.display = "block";
+        return;
+      }
 
-    if (error) {
-      console.error(error);
-      box.innerHTML = `<div class="err">Ошибка загрузки услуг</div>`;
-      return;
+      document.getElementById("noServices").style.display = "none";
+
+      services.forEach(s => {
+        const btn = document.createElement("button");
+        btn.className = "btn2";
+        btn.style.margin = "8px 0";
+        btn.innerText = `${s.title} • ${s.duration_min} мин`;
+        btn.onclick = () => {
+          selectedService = s;
+          document.getElementById("selectedServiceTitle").innerText =
+            "Вы выбрали: " + s.title;
+          show("bookingForm", true);
+          setStatus("");
+        };
+        list.appendChild(btn);
+      });
+
+    } catch (e) {
+      document.getElementById("agentName").innerText = "Ошибка";
+      document.getElementById("hint").innerText = "Проверьте интернет/настройки.";
+      console.error(e);
     }
-
-    if (!data || data.length === 0) {
-      box.innerHTML = `<div class="muted">Пока нет услуг. Добавь первую выше 👆</div>`;
-      return;
-    }
-
-    box.innerHTML = "";
-    data.forEach(s => {
-      const el = document.createElement("div");
-      el.className = "listItem";
-      el.innerHTML = `
-        <div><b>${escapeHtml(s.title || "Без названия")}</b></div>
-        <div class="muted">
-          <span class="pill">${s.duration_min || 0} мин</span>
-          ${s.price ? `<span class="pill">${s.price} сум</span>` : ""}
-        </div>
-      `;
-      box.appendChild(el);
-    });
-  }
-
-  async function loadAdminBookings() {
-    const box = document.getElementById("adminBookings");
-    box.innerHTML = "Загрузка…";
-
-    // Последние записи агента
-    const { data, error } = await sb
-      .from("bookings")
-      .select("*, services(title, duration_min)")
-      .eq("agent_id", agentId)
-      .order("start_time", { ascending: false })
-      .limit(30);
-
-    if (error) {
-      console.error(error);
-      box.innerHTML = `<div class="err">Ошибка загрузки записей</div>`;
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      box.innerHTML = `<div class="muted">Записей пока нет.</div>`;
-      return;
-    }
-
-    box.innerHTML = "";
-    data.forEach(b => {
-      const el = document.createElement("div");
-      el.className = "listItem";
-      const st = fmtDT(b.start_time);
-      const serviceTitle = b.services?.title || "Услуга";
-      el.innerHTML = `
-        <div><b>${escapeHtml(b.customer_name || "Клиент")}</b></div>
-        <div class="muted">${escapeHtml(serviceTitle)} • ${st}</div>
-      `;
-      box.appendChild(el);
-    });
-  }
-
-  async function addService() {
-    const title = document.getElementById("serviceTitle").value.trim();
-    const duration = Number(document.getElementById("serviceDuration").value);
-    const priceRaw = document.getElementById("servicePrice").value;
-    const price = priceRaw ? Number(priceRaw) : null;
-
-    const st = document.getElementById("addServiceStatus");
-    st.innerText = "";
-
-    if (!title || !duration || duration <= 0) {
-      st.innerHTML = `<span class="err">Заполни название и длительность</span>`;
-      return;
-    }
-
-    const { error } = await sb.from("services").insert({
-      agent_id: agentId,
-      title,
-      duration_min: duration,
-      price
-    });
-
-    if (error) {
-      console.error(error);
-      st.innerHTML = `<span class="err">Ошибка добавления услуги</span>`;
-      return;
-    }
-
-    document.getElementById("serviceTitle").value = "";
-    document.getElementById("serviceDuration").value = "";
-    document.getElementById("servicePrice").value = "";
-    st.innerHTML = `<span class="ok">Услуга добавлена ✅</span>`;
-
-    await loadAdminServices();
-  }
-
-  // ====== CLIENT MODE ======
-  async function loadClientByAgentCode(code) {
-    setTitle("Загрузка…", "Ищу агента…");
-
-    hide("adminPanel");
-    show("clientBooking");
-
-    const { data: agent, error } = await sb
-      .from("agents")
-      .select("*")
-      .eq("agent_code", code)
-      .maybeSingle();
-
-    if (error) {
-      console.error(error);
-      setTitle("Ошибка", "Не удалось загрузить агента");
-      return;
-    }
-
-    if (!agent) {
-      setTitle("Агент не найден", "Проверь ссылку или код агента");
-      return;
-    }
-
-    agentId = agent.id;
-
-    setTitle("Запись к " + (agent.full_name || agent.username || "агенту"), "Выбери услугу и время");
-
-    await loadClientServices(agentId);
-
-    document.getElementById("bookBtn").onclick = bookService;
-  }
-
-  async function loadClientServices(aid) {
-    const container = document.getElementById("services");
-    container.innerHTML = "Загрузка услуг…";
-
-    const { data: services, error } = await sb
-      .from("services")
-      .select("*")
-      .eq("agent_id", aid)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error(error);
-      container.innerHTML = `<div class="err">Ошибка загрузки услуг</div>`;
-      return;
-    }
-
-    if (!services || services.length === 0) {
-      container.innerHTML = `<div class="muted">У этого агента пока нет услуг.</div>`;
-      return;
-    }
-
-    container.innerHTML = "";
-
-    services.forEach(s => {
-      const btn = document.createElement("button");
-      btn.className = "btn2";
-      btn.style = "display:block;width:100%;padding:12px;margin:10px 0;border:1px solid #eee;";
-      btn.innerHTML = `
-        <div style="text-align:left">
-          <div><b>${escapeHtml(s.title)}</b></div>
-          <div class="muted">${s.duration_min} мин ${s.price ? " • " + s.price + " сум" : ""}</div>
-        </div>
-      `;
-      btn.onclick = () => {
-        selectedService = s;
-        document.getElementById("bookingFormCard").classList.remove("hidden");
-        document.getElementById("selectedServiceTitle").innerText = "Запись: " + s.title;
-        document.getElementById("status").innerText = "";
-      };
-      container.appendChild(btn);
-    });
   }
 
   async function bookService() {
-    const name = document.getElementById("customerName").value.trim();
-    const time = document.getElementById("bookingTime").value;
+    try {
+      const name = document.getElementById("customerName").value.trim();
+      const time = document.getElementById("bookingTime").value;
 
-    if (!selectedService) {
-      alert("Сначала выбери услугу");
-      return;
+      if (!selectedService) {
+        alert("Выберите услугу");
+        return;
+      }
+      if (!name || !time) {
+        alert("Заполните имя и время");
+        return;
+      }
+
+      setStatus("Записываем...", "muted");
+
+      const payload = {
+        agent_id: agentId,
+        service_id: selectedService.id,
+        customer_name: name,
+        start_time: time,
+        customer_tg_id: customerTgId, // <- важное поле
+      };
+
+      const { error } = await supabase
+        .from("bookings")
+        .insert(payload);
+
+      if (error) {
+        console.error(error);
+        setStatus("Ошибка записи. Проверьте RLS/поля таблицы.", "error");
+        return;
+      }
+
+      setStatus("Вы записаны ✅", "ok");
+
+    } catch (e) {
+      console.error(e);
+      setStatus("Ошибка записи (скрипт).", "error");
     }
-
-    if (!name || !time) {
-      alert("Заполни имя и время");
-      return;
-    }
-
-    const { error } = await sb.from("bookings").insert({
-      agent_id: agentId,
-      service_id: selectedService.id,
-      customer_name: name,
-      start_time: time
-    });
-
-    const status = document.getElementById("status");
-
-    if (error) {
-      console.error(error);
-      status.className = "muted err";
-      status.innerText = "Ошибка записи. Попробуйте позже.";
-      return;
-    }
-
-    status.className = "muted ok";
-    status.innerText = "Вы записаны ✅";
-
-    // optional: очистить
-    // document.getElementById("customerName").value = "";
-    // document.getElementById("bookingTime").value = "";
   }
 
-  // ====== HELPERS ======
-  function escapeHtml(str) {
-    return String(str || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  // START
-  start();
+  loadData();
 </script>
 
 </body>
