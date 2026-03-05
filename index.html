@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta charset="UTF-8">
 <title>Booking</title>
 
@@ -8,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 </head>
+
 
 <body style="font-family:sans-serif;padding:20px">
 
@@ -31,14 +33,18 @@ style="width:100%;padding:10px;margin-bottom:10px"/>
 
 </div>
 
+
+
 <script>
 
 const tg = window.Telegram.WebApp
 tg.expand()
 
+// agent code из Telegram
 const agentCode = tg.initDataUnsafe.start_param
 
-const supabase = window.supabase.createClient(
+// Supabase
+const sb = window.supabase.createClient(
 "https://uuiprnacqstiwfuxvyet.supabase.co",
 "sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs"
 )
@@ -46,41 +52,68 @@ const supabase = window.supabase.createClient(
 let agentId = null
 let selectedService = null
 
+
 async function loadData(){
 
-// агент
-const { data:agent } = await supabase
+if(!agentCode){
+
+document.getElementById("agentName").innerText =
+"Агент не указан"
+
+return
+
+}
+
+
+// получаем агента
+const { data:agent, error } = await sb
 .from("agents")
 .select("*")
 .eq("agent_code", agentCode)
 .single()
+
+
+if(!agent){
+
+document.getElementById("agentName").innerText =
+"Агент не найден"
+
+return
+
+}
+
 
 agentId = agent.id
 
 document.getElementById("agentName").innerText =
 "Запись к " + (agent.full_name || agent.username)
 
-// услуги
-const { data:services } = await supabase
+
+// загружаем услуги
+const { data:services } = await sb
 .from("services")
 .select("*")
 .eq("agent_id", agent.id)
 
+
 const container = document.getElementById("services")
 
-services.forEach(s => {
+
+services.forEach(service => {
 
 const btn = document.createElement("button")
 
-btn.style = "display:block;width:100%;padding:12px;margin:10px 0"
+btn.style =
+"display:block;width:100%;padding:12px;margin:10px 0"
 
 btn.innerText =
-s.title + " • " + s.duration_min + " мин"
+service.title + " • " + service.duration_min + " мин"
 
 btn.onclick = () => {
 
-selectedService = s
-document.getElementById("bookingForm").style.display="block"
+selectedService = service
+
+document.getElementById("bookingForm").style.display = "block"
 
 }
 
@@ -90,6 +123,7 @@ container.appendChild(btn)
 
 }
 
+
 async function bookService(){
 
 const name =
@@ -97,6 +131,7 @@ document.getElementById("customerName").value
 
 const time =
 document.getElementById("bookingTime").value
+
 
 if(!name || !time){
 
@@ -106,7 +141,8 @@ return
 
 }
 
-const { error } = await supabase
+
+const { error } = await sb
 .from("bookings")
 .insert({
 
@@ -117,19 +153,22 @@ start_time: time
 
 })
 
+
 if(error){
 
 document.getElementById("status").innerText =
-"Ошибка записи"
+"Ошибка записи ❌"
 
 return
 
 }
 
+
 document.getElementById("status").innerText =
 "Вы записаны ✅"
 
 }
+
 
 loadData()
 
