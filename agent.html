@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent Panel</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { font-family: sans-serif; padding: 16px; margin: 0; }
+    h2 { margin: 0 0 12px 0; }
+    .muted { color:#666; font-size: 14px; margin-top: 6px; }
+    .card { border:1px solid #eee; border-radius:12px; padding:12px; margin:12px 0; }
+    button { cursor:pointer; border:0; border-radius:12px; padding:12px; width:100%; font-size:16px; }
+    .btn { background:#111; color:#fff; }
+    .btn2 { background:#f2f2f2; color:#111; }
+    input { width:100%; padding:12px; border:1px solid #ddd; border-radius:12px; font-size:16px; box-sizing: border-box; }
+    .link { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; word-break: break-all; background:#f7f7f7; padding:10px; border-radius:10px; }
+    .row { display:flex; gap:10px; }
+    .row > * { flex:1; }
+    .hidden { display:none; }
+    .ok { color:#0a7; }
+    .error { color:#b00020; }
+    .listItem { border:1px solid #eee; border-radius:12px; padding:10px; margin:8px 0; }
+  </style>
+</head>
+
+<body>
+
+  <h2 id="title">Загрузка…</h2>
+  <div id="subtitle" class="muted"></div>
+
+  <!-- NOT REGISTERED -->
+  <div id="notRegistered" class="card hidden">
+    <h3>Вы ещё не агент</h3>
+    <div class="muted">Нажмите кнопку ниже, чтобы создать профиль агента и начать принимать записи.</div>
+    <div style="height:12px"></div>
+    <button class="btn" id="registerBtn">Зарегистрироваться как агент</button>
+    <div id="regStatus" class="muted" style="margin-top:10px"></div>
+  </div>
+
+  <!-- REGISTERED PANEL -->
+  <div id="panel" class="hidden">
+
+    <div class="card">
+      <h3>Ваша ссылка для клиентов</h3>
+      <div id="myLink" class="link">...</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn2" id="copyBtn">Скопировать</button>
+        <button class="btn2" id="openBtn">Открыть</button>
+      </div>
+      <div id="linkStatus" class="muted" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h3>Добавить услугу</h3>
+      <input id="svcTitle" placeholder="Название (например: Консультация)" />
+      <div class="row">
+        <input id="svcDuration" type="number" min="5" step="5" placeholder="Мин" />
+        <input id="svcPrice" type="number" min="0" step="1000" placeholder="Цена (опц.)" />
+      </div>
+      <button class="btn" id="addSvcBtn">Добавить</button>
+      <div id="svcStatus" class="muted" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h3>Мои услуги</h3>
+      <div id="services"></div>
+      <div id="noServices" class="muted hidden">Пока нет услуг.</div>
+    </div>
+
+    <div class="card">
+      <h3>Мои записи</h3>
+      <div id="bookings"></div>
+      <div id="noBookings" class="muted hidden">Записей пока нет.</div>
+    </div>
+
+  </div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+
+  const sb = window.supabase.createClient(
+    "https://uuiprnacqstiwfuxvyet.supabase.co",
+    "sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs"
+  );
+
+  const BOT_USERNAME = "testaltegiobot"; // поменяй если другой
+
+  const tgUserId = tg?.initDataUnsafe?.user?.id || null;
+  const username = tg?.initDataUnsafe?.user?.username || null;
+  const fullName = [tg?.initDataUnsafe?.user?.first_name, tg?.initDataUnsafe?.user?.last_name].filter(Boolean).join(" ") || null;
+
+  let agent = null;
+
+  function show(id){ document.getElementById(id).classList.remove("hidden"); }
+  function hide(id){ document.getElementById(id).classList.add("hidden"); }
+
+  function setText(id, t){ document.getElementById(id).textContent = t; }
+
+  function randomCode(){
+    return (Math.random().toString(36).slice(2, 10)).toLowerCase();
+  }
+
+  async function init(){
+    if(!tgUserId){
+      setText("title", "Откройте через Telegram");
+      setText("subtitle", "Не вижу Telegram user id.");
+      return;
+    }
+
+    setText("title", "Панель агента");
+    setText("subtitle", "Проверяю регистрацию…");
+
+    const { data, error } = await sb
+      .from("agents")
+      .select("*")
+      .eq("tg_user_id", tgUserId)
+      .maybeSingle();
+
+    if(error){
+      console.error(error);
+      setText("subtitle", "Ошибка Supabase.");
+      return;
+    }
+
+    agent = data;
+
+    if(!agent){
+      hide("panel");
+      show("notRegistered");
+      setText("subtitle", "Вы не зарегистрированы как агент.");
+      document.getElementById("registerBtn").onclick = registerAgent;
+      return;
+    }
+
+    hide("notRegistered");
+    show("panel");
+    setText("subtitle", "Вы зарегистрированы ✅");
+
+    renderLink();
+    document.getElementById("addSvcBtn").onclick = addService;
+
+    await refreshAll();
+  }
+
+  async function registerAgent(){
+    setText("regStatus", "Создаю профиль…");
+
+    const code = randomCode();
+
+    const { data, error } = await sb.from("agents").insert({
+      tg_user_id: tgUserId,
+      username: username,
+      full_name: fullName,
+      agent_code: code
+    }).select("*").single();
+
+    if(error){
+      console.error(error);
+      setText("regStatus", "Ошибка регистрации ❌");
+      return;
+    }
+
+    agent = data;
+    setText("regStatus", "Готово ✅");
+    hide("notRegistered");
+    show("panel");
+    renderLink();
+    await refreshAll();
+  }
+
+  function renderLink(){
+    const link = `https://t.me/${BOT_USERNAME}?startapp=${agent.agent_code}`;
+    setText("myLink", link);
+
+    document.getElementById("copyBtn").onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(link);
+        setText("linkStatus", "Скопировано ✅");
+      } catch {
+        setText("linkStatus", "Не удалось скопировать. Скопируйте вручную.");
+      }
+    };
+
+    document.getElementById("openBtn").onclick = () => window.open(link, "_blank");
+  }
+
+  async function refreshAll(){
+    await loadServices();
+    await loadBookings();
+  }
+
+  async function loadServices(){
+    const { data, error } = await sb
+      .from("services")
+      .select("*")
+      .eq("agent_id", agent.id)
+      .order("created_at", { ascending: false });
+
+    const box = document.getElementById("services");
+    box.innerHTML = "";
+    hide("noServices");
+
+    if(error){
+      console.error(error);
+      show("noServices");
+      setText("noServices", "Ошибка загрузки услуг.");
+      return;
+    }
+
+    if(!data || data.length === 0){
+      show("noServices");
+      return;
+    }
+
+    data.forEach(s => {
+      const div = document.createElement("div");
+      div.className = "listItem";
+      div.innerHTML = `<b>${s.title}</b><div class="muted">${s.duration_min} мин ${s.price ? "• " + s.price : ""}</div>`;
+      box.appendChild(div);
+    });
+  }
+
+  async function loadBookings(){
+    const { data, error } = await sb
+      .from("bookings")
+      .select("id, customer_name, start_time, services(title)")
+      .eq("agent_id", agent.id)
+      .order("start_time", { ascending: true })
+      .limit(50);
+
+    const box = document.getElementById("bookings");
+    box.innerHTML = "";
+    hide("noBookings");
+
+    if(error){
+      console.error(error);
+      show("noBookings");
+      setText("noBookings", "Ошибка загрузки записей.");
+      return;
+    }
+
+    if(!data || data.length === 0){
+      show("noBookings");
+      return;
+    }
+
+    data.forEach(b => {
+      const div = document.createElement("div");
+      div.className = "listItem";
+      const dt = new Date(b.start_time).toLocaleString();
+      div.innerHTML = `<b>${b.customer_name}</b><div class="muted">${b.services?.title || "Услуга"} • ${dt}</div>`;
+      box.appendChild(div);
+    });
+  }
+
+  async function addService(){
+    const title = document.getElementById("svcTitle").value.trim();
+    const duration = Number(document.getElementById("svcDuration").value || 0);
+    const priceRaw = document.getElementById("svcPrice").value;
+    const price = priceRaw ? Number(priceRaw) : null;
+
+    if(!title || duration <= 0){
+      setText("svcStatus", "Заполните название и длительность.");
+      return;
+    }
+
+    setText("svcStatus", "Сохраняю…");
+
+    const payload = { agent_id: agent.id, title, duration_min: duration };
+    if(price !== null) payload.price = price;
+
+    const { error } = await sb.from("services").insert(payload);
+
+    if(error){
+      console.error(error);
+      setText("svcStatus", "Ошибка добавления ❌");
+      return;
+    }
+
+    document.getElementById("svcTitle").value = "";
+    document.getElementById("svcDuration").value = "";
+    document.getElementById("svcPrice").value = "";
+    setText("svcStatus", "Услуга добавлена ✅");
+
+    await loadServices();
+  }
+
+  init();
+</script>
+
+</body>
+</html>
