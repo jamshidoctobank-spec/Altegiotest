@@ -9,213 +9,194 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    body { font-family: sans-serif; padding: 16px; margin: 0; }
-    h2 { margin: 0 0 12px 0; }
-    .muted { color:#666; font-size: 14px; margin-top: 6px; }
-    .card { border:1px solid #eee; border-radius:12px; padding:12px; margin:12px 0; }
-    button { cursor:pointer; border:0; border-radius:12px; padding:12px; width:100%; font-size:16px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin:0; padding:16px; }
+    h2 { margin: 0 0 8px 0; }
+    .muted { color:#666; font-size:14px; }
+    .card { border:1px solid #eee; border-radius:14px; padding:14px; margin:12px 0; }
+    button { width:100%; padding:12px; border-radius:12px; border:0; font-size:16px; cursor:pointer; }
     .btn { background:#111; color:#fff; }
     .btn2 { background:#f2f2f2; color:#111; }
-    input { width:100%; padding:12px; border:1px solid #ddd; border-radius:12px; font-size:16px; box-sizing: border-box; }
-    .row { display:flex; gap:10px; }
-    .row > * { flex:1; }
-    .error { color:#b00020; }
-    .ok { color:#0a7a2f; }
+    input { width:100%; padding:12px; border:1px solid #ddd; border-radius:12px; font-size:16px; box-sizing:border-box; }
+    .hidden { display:none; }
+    .ok { color:#0a7; }
+    .err { color:#b00020; }
+    .serviceBtn { text-align:left; }
   </style>
 </head>
 
 <body>
+  <h2 id="title">Загрузка…</h2>
+  <div id="sub" class="muted"></div>
 
-  <h2 id="agentName">Загрузка...</h2>
-  <div id="hint" class="muted"></div>
-
-  <div id="services" class="card" style="display:none">
+  <div id="servicesCard" class="card hidden">
     <div class="muted" style="margin-bottom:10px">Выберите услугу:</div>
     <div id="servicesList"></div>
-    <div id="noServices" class="muted" style="display:none">У агента пока нет услуг.</div>
+    <div id="noServices" class="muted hidden">У агента пока нет услуг.</div>
   </div>
 
-  <div id="bookingForm" class="card" style="display:none">
-    <div id="selectedServiceTitle" style="font-weight:600; margin-bottom:10px"></div>
-
+  <div id="formCard" class="card hidden">
+    <div id="picked" style="font-weight:700; margin-bottom:10px"></div>
     <input id="customerName" placeholder="Ваше имя" />
-
     <div style="height:10px"></div>
-
     <input id="bookingTime" type="datetime-local" />
-
     <div style="height:12px"></div>
-
-    <button class="btn" onclick="bookService()">Записаться</button>
-
+    <button id="bookBtn" class="btn">Записаться</button>
     <div id="status" class="muted" style="margin-top:10px"></div>
-
     <div style="height:10px"></div>
-
-    <button class="btn2" onclick="resetSelection()">Выбрать другую услугу</button>
+    <button id="backBtn" class="btn2">Выбрать другую услугу</button>
   </div>
 
 <script>
-  // Telegram
-  const tg = window.Telegram.WebApp;
-  tg.expand();
+(function () {
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.expand(); tg.ready(); }
 
-  // IMPORTANT: agentCode приходит только если открыли ссылкой
-  // https://t.me/<bot>?startapp=<agentCode>
+  // На экран выводим любые ошибки (чтобы не было "просто загрузка")
+  const fatal = (msg) => {
+    document.getElementById("title").textContent = "Ошибка";
+    document.getElementById("sub").textContent = msg;
+  };
+  window.addEventListener("error", (e) => fatal(e?.message || "JS error"));
+  window.addEventListener("unhandledrejection", (e) => fatal(e?.reason?.message || "Promise error"));
+
+  const show = (id) => document.getElementById(id).classList.remove("hidden");
+  const hide = (id) => document.getElementById(id).classList.add("hidden");
+  const setStatus = (text, cls="muted") => {
+    const el = document.getElementById("status");
+    el.className = cls;
+    el.textContent = text || "";
+  };
+
+  // ====== CONFIG ======
+  const SUPABASE_URL = "https://uuiprnacqstiwfuxvyet.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs";
+
+  // клиент Supabase — НЕ называем "supabase" (чтобы не ловить конфликт)
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // agentCode приходит только из deep link: https://t.me/<bot>?startapp=CODE
   const agentCode = tg?.initDataUnsafe?.start_param || null;
 
-  // customer tg id — чтобы потом n8n мог написать клиенту
+  // данные клиента (для уведомлений через n8n)
   const customerTgId = tg?.initDataUnsafe?.user?.id || null;
-
-  // Supabase
-  const supabaseUrl = "https://uuiprnacqstiwfuxvyet.supabase.co";
-  const supabaseKey = "sb_publishable_B5Zyxa2UnTqlFaOvf1G_kg_2DS9kiqs";
-  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  const customerUsername = tg?.initDataUnsafe?.user?.username || null;
+  const customerFullName = [tg?.initDataUnsafe?.user?.first_name, tg?.initDataUnsafe?.user?.last_name].filter(Boolean).join(" ") || null;
 
   let agentId = null;
   let selectedService = null;
 
-  function setStatus(text, type="muted") {
-    const el = document.getElementById("status");
-    el.className = type === "ok" ? "ok" : type === "error" ? "error" : "muted";
-    el.innerText = text || "";
+  async function init() {
+    document.getElementById("title").textContent = "Загрузка…";
+    document.getElementById("sub").textContent = "";
+
+    if (!agentCode) {
+      document.getElementById("title").textContent = "Ссылка агента не указана";
+      document.getElementById("sub").textContent = "Откройте ссылку вида: t.me/<bot>?startapp=CODE";
+      return;
+    }
+
+    // 1) Агент
+    const { data: agent, error: e1 } = await sb
+      .from("agents")
+      .select("id, full_name, username, agent_code")
+      .eq("agent_code", agentCode)
+      .maybeSingle();
+
+    if (e1) return fatal("Supabase agents error: " + e1.message);
+    if (!agent) {
+      document.getElementById("title").textContent = "Агент не найден";
+      document.getElementById("sub").textContent = "Проверьте правильность ссылки агента.";
+      return;
+    }
+
+    agentId = agent.id;
+    document.getElementById("title").textContent = "Запись к " + (agent.full_name || agent.username || "агенту");
+    document.getElementById("sub").textContent = "Выберите услугу и время.";
+
+    // 2) Услуги
+    const { data: services, error: e2 } = await sb
+      .from("services")
+      .select("id, title, duration_min, price")
+      .eq("agent_id", agentId)
+      .order("created_at", { ascending: false });
+
+    if (e2) return fatal("Supabase services error: " + e2.message);
+
+    show("servicesCard");
+    const list = document.getElementById("servicesList");
+    list.innerHTML = "";
+    hide("noServices");
+
+    if (!services || services.length === 0) {
+      show("noServices");
+      return;
+    }
+
+    services.forEach(s => {
+      const btn = document.createElement("button");
+      btn.className = "btn2 serviceBtn";
+      btn.style.margin = "8px 0";
+      btn.innerHTML = `<b>${escapeHtml(s.title)}</b><div class="muted">${s.duration_min || 0} мин ${s.price ? "• " + s.price : ""}</div>`;
+      btn.addEventListener("click", () => {
+        selectedService = s;
+        document.getElementById("picked").textContent = "Вы выбрали: " + s.title;
+        show("formCard");
+        setStatus("");
+      });
+      list.appendChild(btn);
+    });
   }
 
-  function show(elId, yes=true) {
-    document.getElementById(elId).style.display = yes ? "block" : "none";
+  async function book() {
+    if (!selectedService) return alert("Выберите услугу");
+    const name = document.getElementById("customerName").value.trim();
+    const time = document.getElementById("bookingTime").value;
+
+    if (!name || !time) return alert("Заполните имя и время");
+
+    setStatus("Записываем…");
+
+    const { error } = await sb.from("bookings").insert({
+      agent_id: agentId,
+      service_id: selectedService.id,
+      customer_name: name,
+      start_time: time,
+      customer_tg_id: customerTgId,
+      customer_username: customerUsername,
+      customer_full_name: customerFullName,
+      notified: false
+    });
+
+    if (error) {
+      console.error(error);
+      setStatus("Ошибка записи: " + error.message, "err");
+      return;
+    }
+
+    setStatus("Вы записаны ✅", "ok");
+    tg?.HapticFeedback?.notificationOccurred?.("success");
   }
 
-  function resetSelection() {
+  function reset() {
     selectedService = null;
-    show("bookingForm", false);
+    hide("formCard");
     setStatus("");
   }
 
-  async function loadData() {
-    try {
-      // 1) Проверяем agentCode
-      if (!agentCode) {
-        document.getElementById("agentName").innerText = "Агент не указан";
-        document.getElementById("hint").innerText =
-          "Откройте через уникальную ссылку агента (startapp).";
-        show("services", false);
-        show("bookingForm", false);
-        return;
-      }
-
-      // 2) Загружаем агента
-      const { data: agent, error: agentErr } = await supabase
-        .from("agents")
-        .select("*")
-        .eq("agent_code", agentCode)
-        .single();
-
-      if (agentErr || !agent) {
-        document.getElementById("agentName").innerText = "Агент не найден";
-        document.getElementById("hint").innerText =
-          "Проверьте правильность ссылки агента.";
-        show("services", false);
-        show("bookingForm", false);
-        return;
-      }
-
-      agentId = agent.id;
-      document.getElementById("agentName").innerText =
-        "Запись к " + (agent.full_name || agent.username || "агенту");
-      document.getElementById("hint").innerText =
-        "Выберите услугу и время — мы подтвердим запись.";
-
-      // 3) Загружаем услуги агента
-      const { data: services, error: servicesErr } = await supabase
-        .from("services")
-        .select("*")
-        .eq("agent_id", agentId)
-        .order("title", { ascending: true });
-
-      show("services", true);
-
-      const list = document.getElementById("servicesList");
-      list.innerHTML = "";
-
-      if (servicesErr) {
-        document.getElementById("noServices").style.display = "block";
-        document.getElementById("noServices").innerText = "Ошибка загрузки услуг.";
-        return;
-      }
-
-      if (!services || services.length === 0) {
-        document.getElementById("noServices").style.display = "block";
-        return;
-      }
-
-      document.getElementById("noServices").style.display = "none";
-
-      services.forEach(s => {
-        const btn = document.createElement("button");
-        btn.className = "btn2";
-        btn.style.margin = "8px 0";
-        btn.innerText = `${s.title} • ${s.duration_min} мин`;
-        btn.onclick = () => {
-          selectedService = s;
-          document.getElementById("selectedServiceTitle").innerText =
-            "Вы выбрали: " + s.title;
-          show("bookingForm", true);
-          setStatus("");
-        };
-        list.appendChild(btn);
-      });
-
-    } catch (e) {
-      document.getElementById("agentName").innerText = "Ошибка";
-      document.getElementById("hint").innerText = "Проверьте интернет/настройки.";
-      console.error(e);
-    }
+  function escapeHtml(str) {
+    return String(str || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
-  async function bookService() {
-    try {
-      const name = document.getElementById("customerName").value.trim();
-      const time = document.getElementById("bookingTime").value;
+  document.getElementById("bookBtn").addEventListener("click", book);
+  document.getElementById("backBtn").addEventListener("click", reset);
 
-      if (!selectedService) {
-        alert("Выберите услугу");
-        return;
-      }
-      if (!name || !time) {
-        alert("Заполните имя и время");
-        return;
-      }
-
-      setStatus("Записываем...", "muted");
-
-      const payload = {
-        agent_id: agentId,
-        service_id: selectedService.id,
-        customer_name: name,
-        start_time: time,
-        customer_tg_id: customerTgId, // <- важное поле
-      };
-
-      const { error } = await supabase
-        .from("bookings")
-        .insert(payload);
-
-      if (error) {
-        console.error(error);
-        setStatus("Ошибка записи. Проверьте RLS/поля таблицы.", "error");
-        return;
-      }
-
-      setStatus("Вы записаны ✅", "ok");
-
-    } catch (e) {
-      console.error(e);
-      setStatus("Ошибка записи (скрипт).", "error");
-    }
-  }
-
-  loadData();
+  init();
+})();
 </script>
-
 </body>
 </html>
